@@ -1,0 +1,548 @@
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../data/app_state.dart';
+import '../models/models.dart';
+import '../theme/app_theme.dart';
+
+class SellPage extends StatefulWidget {
+  const SellPage({super.key});
+
+  @override
+  State<SellPage> createState() => _SellPageState();
+}
+
+class _SellPageState extends State<SellPage> {
+  final _formKey = GlobalKey<FormState>();
+  final _nameController = TextEditingController();
+  final _brandController = TextEditingController();
+  final _descController = TextEditingController();
+  final _priceController = TextEditingController();
+  final _sizeController = TextEditingController();
+
+  String _selectedCategory = 'Woman Fashion';
+  String _selectedCondition = 'Preloved - Like New';
+  final List<String> _selectedPayments = [];
+  bool _hasUnsavedChanges = false;
+
+  static const List<String> _categories = [
+    'Woman Fashion', 'Man Fashion', 'Health & Beauty',
+    'Keychain', 'Trinket', 'Shoes', 'Playing Card', 'Sticker',
+  ];
+
+  static const List<String> _conditions = [
+    'Brand New - Sealed', 'Brand New', 'Preloved - Like New',
+    'Preloved - Good', 'Used - Good',
+  ];
+
+  static const List<String> _paymentOptions = [
+    'Transfer Bank', 'GoPay', 'OVO', 'DANA', 'ShopeePay', 'COD',
+  ];
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _brandController.dispose();
+    _descController.dispose();
+    _priceController.dispose();
+    _sizeController.dispose();
+    super.dispose();
+  }
+
+  void _markChanged() {
+    if (!_hasUnsavedChanges) setState(() => _hasUnsavedChanges = true);
+  }
+
+  Future<bool> _onWillPop() async {
+    if (!_hasUnsavedChanges) return true;
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Batalkan listing?',
+            style: TextStyle(fontWeight: FontWeight.w800)),
+        content: const Text(
+            'Data yang sudah kamu isi akan hilang. Yakin mau keluar?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Lanjutkan isi',
+                style: TextStyle(color: AppTheme.primary)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.grey[400]),
+            child: const Text('Keluar'),
+          ),
+        ],
+      ),
+    );
+    return result ?? false;
+  }
+
+  void _submit() {
+    if (!_formKey.currentState!.validate()) return;
+    if (_selectedPayments.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Pilih minimal satu metode pembayaran'),
+          backgroundColor: Colors.red[400],
+          behavior: SnackBarBehavior.floating,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+      );
+      return;
+    }
+
+    final product = Product(
+      id: 'p${DateTime.now().millisecondsSinceEpoch}',
+      name: _nameController.text.trim(),
+      brand: _brandController.text.trim(),
+      description: _descController.text.trim(),
+      category: _selectedCategory,
+      price: double.parse(_priceController.text.trim()),
+      condition: _selectedCondition,
+      size: _sizeController.text.trim().isEmpty
+          ? 'One Size'
+          : _sizeController.text.trim(),
+      sellerId: 'u1',
+      sellerName: 'you',
+      sellerVerified: false,
+      imageEmoji: '🛍️',
+      imageColor: '#F8BBD9',
+      listedAt: DateTime.now(),
+      paymentMethods: List.from(_selectedPayments),
+    );
+
+    context.read<AppState>().addProduct(product);
+    setState(() => _hasUnsavedChanges = false);
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('🎉', style: TextStyle(fontSize: 48)),
+            const SizedBox(height: 12),
+            const Text(
+              'Produk berhasil dilisting!',
+              style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '${_nameController.text} sudah aktif dan bisa ditemukan pembeli.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+            ),
+          ],
+        ),
+        actions: [
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              Navigator.pop(context);
+            },
+            style: ElevatedButton.styleFrom(
+                minimumSize: const Size(double.infinity, 44)),
+            child: const Text('Lihat di Explore'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : const Color(0xFF2D1B2E);
+
+    return PopScope(
+      canPop: !_hasUnsavedChanges,
+      onPopInvokedWithResult: (didPop, _) async {
+        if (!didPop && _hasUnsavedChanges) {
+          final should = await _onWillPop();
+          if (should && mounted) Navigator.pop(context);
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Jual Barang 🏷️'),
+          leading: IconButton(
+            icon: const Icon(Icons.close),
+            onPressed: () async {
+              if (_hasUnsavedChanges) {
+                final should = await _onWillPop();
+                if (should && mounted) Navigator.pop(context);
+              } else {
+                Navigator.pop(context);
+              }
+            },
+          ),
+        ),
+        // LayoutBuilder untuk menyesuaikan padding di layar lebar (rubrik C)
+        body: SafeArea(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final isWide = constraints.maxWidth >= 600;
+              return SingleChildScrollView(
+                padding: EdgeInsets.all(isWide ? 32 : 20),
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 600),
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // ── Foto placeholder ──────────────────────────
+                          Semantics(
+                            label: 'Tombol tambah foto produk',
+                            button: true,
+                            child: GestureDetector(
+                              onTap: () {},
+                              child: Container(
+                                height: 140,
+                                width: double.infinity,
+                                decoration: BoxDecoration(
+                                  color: isDark
+                                      ? const Color(0xFF2D1B2E)
+                                      : AppTheme.blush,
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(
+                                      color: AppTheme.rose, width: 2),
+                                ),
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Text('📷',
+                                        style: TextStyle(fontSize: 36)),
+                                    const SizedBox(height: 8),
+                                    const Text('Tambah Foto',
+                                        style: TextStyle(
+                                            color: AppTheme.primary,
+                                            fontWeight: FontWeight.w700,
+                                            fontSize: 14)),
+                                    Text('Tap untuk pilih dari galeri',
+                                        style: TextStyle(
+                                            color: isDark
+                                                ? Colors.white38
+                                                : Colors.grey[400],
+                                            fontSize: 11)),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+
+                          const SizedBox(height: 24),
+                          _sectionLabel('Informasi Produk', textColor),
+                          const SizedBox(height: 12),
+
+                          _buildField(
+                            context: context,
+                            controller: _nameController,
+                            label: 'Nama Produk',
+                            hint: 'Contoh: Hirono Macaron Keychain',
+                            onChanged: (_) => _markChanged(),
+                            validator: (v) {
+                              if (v == null || v.trim().isEmpty)
+                                return 'Nama produk wajib diisi';
+                              if (v.trim().length < 3)
+                                return 'Minimal 3 karakter';
+                              return null;
+                            },
+                          ),
+
+                          const SizedBox(height: 12),
+                          _buildField(
+                            context: context,
+                            controller: _brandController,
+                            label: 'Merek / Brand',
+                            hint: 'Contoh: Pop Mart, Uniqlo',
+                            onChanged: (_) => _markChanged(),
+                            validator: (v) {
+                              if (v == null || v.trim().isEmpty)
+                                return 'Merek wajib diisi';
+                              return null;
+                            },
+                          ),
+
+                          const SizedBox(height: 12),
+                          // Row untuk Kategori + Kondisi (pakai Row+Expanded rubrik B)
+                          isWide
+                              ? Row(
+                                  children: [
+                                    Expanded(
+                                      child: _dropdownField(
+                                        context: context,
+                                        label: 'Kategori',
+                                        value: _selectedCategory,
+                                        items: _categories,
+                                        onChanged: (v) => setState(() {
+                                          _selectedCategory = v!;
+                                          _markChanged();
+                                        }),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: _dropdownField(
+                                        context: context,
+                                        label: 'Kondisi',
+                                        value: _selectedCondition,
+                                        items: _conditions,
+                                        onChanged: (v) => setState(() {
+                                          _selectedCondition = v!;
+                                          _markChanged();
+                                        }),
+                                      ),
+                                    ),
+                                  ],
+                                )
+                              : Column(
+                                  children: [
+                                    _dropdownField(
+                                      context: context,
+                                      label: 'Kategori',
+                                      value: _selectedCategory,
+                                      items: _categories,
+                                      onChanged: (v) => setState(() {
+                                        _selectedCategory = v!;
+                                        _markChanged();
+                                      }),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    _dropdownField(
+                                      context: context,
+                                      label: 'Kondisi',
+                                      value: _selectedCondition,
+                                      items: _conditions,
+                                      onChanged: (v) => setState(() {
+                                        _selectedCondition = v!;
+                                        _markChanged();
+                                      }),
+                                    ),
+                                  ],
+                                ),
+
+                          const SizedBox(height: 12),
+                          _buildField(
+                            context: context,
+                            controller: _sizeController,
+                            label: 'Ukuran (opsional)',
+                            hint: 'Contoh: M, 37, One Size',
+                            onChanged: (_) => _markChanged(),
+                          ),
+
+                          const SizedBox(height: 12),
+                          TextFormField(
+                            controller: _descController,
+                            maxLines: 4,
+                            onChanged: (_) => _markChanged(),
+                            style: TextStyle(color: textColor, fontSize: 13),
+                            decoration: InputDecoration(
+                              labelText: 'Deskripsi',
+                              hintText:
+                                  'Ceritakan kondisi, alasan jual, kelengkapan...',
+                              hintStyle: TextStyle(
+                                  color: isDark
+                                      ? Colors.white38
+                                      : Colors.grey[400],
+                                  fontSize: 12),
+                              alignLabelWithHint: true,
+                            ),
+                            validator: (v) {
+                              if (v == null || v.trim().isEmpty)
+                                return 'Deskripsi wajib diisi';
+                              if (v.trim().length < 10)
+                                return 'Minimal 10 karakter';
+                              return null;
+                            },
+                          ),
+
+                          const SizedBox(height: 24),
+                          _sectionLabel('Harga & Pembayaran', textColor),
+                          const SizedBox(height: 12),
+
+                          _buildField(
+                            context: context,
+                            controller: _priceController,
+                            label: 'Harga (Rp)',
+                            hint: 'Contoh: 85000',
+                            keyboardType: TextInputType.number,
+                            onChanged: (_) => _markChanged(),
+                            validator: (v) {
+                              if (v == null || v.trim().isEmpty)
+                                return 'Harga wajib diisi';
+                              final parsed = double.tryParse(v.trim());
+                              if (parsed == null || parsed <= 0)
+                                return 'Masukkan harga yang valid';
+                              return null;
+                            },
+                          ),
+
+                          const SizedBox(height: 16),
+                          Text(
+                            'Metode Pembayaran',
+                            style: TextStyle(
+                                color: isDark
+                                    ? Colors.white70
+                                    : Colors.grey[700],
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700),
+                          ),
+                          const SizedBox(height: 8),
+                          // Wrap untuk chip pembayaran (rubrik B)
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: _paymentOptions.map((option) {
+                              final isSelected =
+                                  _selectedPayments.contains(option);
+                              return Semantics(
+                                label: '$option, ${isSelected ? 'dipilih' : 'belum dipilih'}',
+                                button: true,
+                                child: GestureDetector(
+                                  onTap: () {
+                                    setState(() {
+                                      if (isSelected) {
+                                        _selectedPayments.remove(option);
+                                      } else {
+                                        _selectedPayments.add(option);
+                                      }
+                                      _markChanged();
+                                    });
+                                  },
+                                  child: AnimatedContainer(
+                                    duration:
+                                        const Duration(milliseconds: 150),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 14, vertical: 8),
+                                    decoration: BoxDecoration(
+                                      color: isSelected
+                                          ? AppTheme.primary
+                                          : (isDark
+                                              ? const Color(0xFF3D2040)
+                                              : AppTheme.blush),
+                                      borderRadius:
+                                          BorderRadius.circular(20),
+                                    ),
+                                    child: Text(
+                                      option,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w700,
+                                        color: isSelected
+                                            ? Colors.white
+                                            : AppTheme.primaryDark,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              );
+                            }).toList(),
+                          ),
+
+                          const SizedBox(height: 32),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              onPressed: _submit,
+                              icon: const Icon(Icons.sell_outlined, size: 18),
+                              label: const Text('Listing Sekarang!'),
+                              style: ElevatedButton.styleFrom(
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 16),
+                                textStyle: const TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w800),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _sectionLabel(String label, Color textColor) {
+    return Row(
+      children: [
+        Container(
+          width: 4,
+          height: 16,
+          decoration: BoxDecoration(
+              color: AppTheme.primary, borderRadius: BorderRadius.circular(2)),
+        ),
+        const SizedBox(width: 8),
+        Text(label,
+            style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w800,
+                color: textColor)),
+      ],
+    );
+  }
+
+  Widget _buildField({
+    required BuildContext context,
+    required TextEditingController controller,
+    required String label,
+    required String hint,
+    TextInputType? keyboardType,
+    void Function(String)? onChanged,
+    String? Function(String?)? validator,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return TextFormField(
+      controller: controller,
+      keyboardType: keyboardType,
+      onChanged: onChanged,
+      style: TextStyle(
+          color: isDark ? Colors.white : const Color(0xFF2D1B2E),
+          fontSize: 13),
+      decoration: InputDecoration(
+        labelText: label,
+        hintText: hint,
+        hintStyle: TextStyle(
+            color: isDark ? Colors.white38 : Colors.grey[400], fontSize: 12),
+      ),
+      validator: validator,
+    );
+  }
+
+  Widget _dropdownField({
+    required BuildContext context,
+    required String label,
+    required String value,
+    required List<String> items,
+    required void Function(String?) onChanged,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return DropdownButtonFormField<String>(
+      value: value,
+      decoration: InputDecoration(labelText: label),
+      style: TextStyle(
+          color: isDark ? Colors.white : const Color(0xFF2D1B2E),
+          fontSize: 13,
+          fontFamily: 'Nunito'),
+      dropdownColor: isDark ? const Color(0xFF2D1B2E) : Colors.white,
+      isExpanded: true,
+      items: items
+          .map((item) => DropdownMenuItem(value: item, child: Text(item)))
+          .toList(),
+      onChanged: onChanged,
+    );
+  }
+}

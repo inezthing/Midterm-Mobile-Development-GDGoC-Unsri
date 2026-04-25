@@ -1,0 +1,347 @@
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../data/app_state.dart';
+import '../models/models.dart';
+import '../theme/app_theme.dart';
+import '../widgets/product_card.dart';
+import 'settings_page.dart';
+
+class ProfilePage extends StatelessWidget {
+  const ProfilePage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    // StatelessWidget boleh pakai watch hanya jika di dalam MaterialApp tree
+    // Tapi lebih aman pakai Consumer
+    return Consumer<AppState>(
+      builder: (context, state, _) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        final textColor = isDark ? Colors.white : const Color(0xFF2D1B2E);
+        final subColor = isDark ? Colors.white54 : Colors.grey[500]!;
+        final myProducts = state.products.where((p) => p.sellerId == 'u1').toList();
+        final myPosts = state.posts.where((p) => p.userId == 'u1').toList();
+
+        return Scaffold(
+          body: SafeArea(
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Header gradient
+                  Container(
+                    width: double.infinity,
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [AppTheme.primary, AppTheme.accent],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 20, 20, 30),
+                      child: Column(
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text('Profil',
+                                  style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.w800)),
+                              Semantics(
+                                label: 'Buka pengaturan',
+                                child: IconButton(
+                                  onPressed: () => Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                        builder: (_) => const SettingsPage()),
+                                  ),
+                                  icon: const Icon(Icons.settings_outlined,
+                                      color: Colors.white),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          Container(
+                            width: 80,
+                            height: 80,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.2),
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                  color: Colors.white.withOpacity(0.5), width: 2),
+                            ),
+                            child: const Center(
+                                child: Text('🌷', style: TextStyle(fontSize: 36))),
+                          ),
+                          const SizedBox(height: 12),
+                          const Text('Nadia Putri',
+                              style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w800)),
+                          const Text('@you',
+                              style: TextStyle(color: Colors.white70, fontSize: 13)),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  // Info
+                  Container(
+                    margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF2D1B2E) : Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2))
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        _infoItem('21', 'Tahun', isDark),
+                        _divider(),
+                        _infoItem('Apr 2025', 'Bergabung', isDark),
+                        _divider(),
+                        _infoItem('Palembang', 'Lokasi', isDark),
+                      ],
+                    ),
+                  ),
+
+                  // Stats
+                  Container(
+                    margin: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF2D1B2E) : Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(child: _statCard('${myProducts.length}', 'Produk Dijual', '🛍️', isDark)),
+                        const SizedBox(width: 10),
+                        Expanded(
+                            child: _statCard(
+                                '${state.products.where((p) => p.isFavorite).length}',
+                                'Favorit',
+                                '❤️',
+                                isDark)),
+                        const SizedBox(width: 10),
+                        Expanded(child: _statCard('${myPosts.length}', 'Postingan', '💬', isDark)),
+                      ],
+                    ),
+                  ),
+
+                  // My products header
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 4,
+                          height: 16,
+                          decoration: BoxDecoration(
+                              color: AppTheme.primary,
+                              borderRadius: BorderRadius.circular(2)),
+                        ),
+                        const SizedBox(width: 8),
+                        Text('Produk Saya',
+                            style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w800,
+                                color: textColor)),
+                      ],
+                    ),
+                  ),
+
+                  if (myProducts.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Center(
+                        child: Column(
+                          children: [
+                            const Text('🛍️', style: TextStyle(fontSize: 40)),
+                            const SizedBox(height: 8),
+                            Text('Belum ada produk dijual',
+                                style: TextStyle(
+                                    color: subColor,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600)),
+                          ],
+                        ),
+                      ),
+                    )
+                  else
+                    SizedBox(
+                      height: 230,
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        itemCount: myProducts.length,
+                        itemBuilder: (context, index) => SizedBox(
+                          width: 150,
+                          child: Padding(
+                            padding: const EdgeInsets.only(right: 10),
+                            child: ProductCard(product: myProducts[index]),
+                          ),
+                        ),
+                      ),
+                    ),
+
+                  // Community posts header
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 4,
+                          height: 16,
+                          decoration: BoxDecoration(
+                              color: AppTheme.primary,
+                              borderRadius: BorderRadius.circular(2)),
+                        ),
+                        const SizedBox(width: 8),
+                        Text('Postingan Komunitas',
+                            style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w800,
+                                color: textColor)),
+                      ],
+                    ),
+                  ),
+
+                  if (myPosts.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+                      child: Center(
+                        child: Text('Belum ada postingan di komunitas',
+                            style: TextStyle(
+                                color: subColor,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600)),
+                      ),
+                    )
+                  else
+                    ...myPosts.map((post) => Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+                          child: Card(
+                            child: Padding(
+                              padding: const EdgeInsets.all(14),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 8, vertical: 3),
+                                        decoration: BoxDecoration(
+                                            color: AppTheme.blush,
+                                            borderRadius: BorderRadius.circular(6)),
+                                        child: Text(post.type,
+                                            style: const TextStyle(
+                                                fontSize: 10,
+                                                color: AppTheme.primary,
+                                                fontWeight: FontWeight.w700)),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 8, vertical: 3),
+                                        decoration: BoxDecoration(
+                                          color: isDark ? Colors.white10 : Colors.grey[100],
+                                          borderRadius: BorderRadius.circular(6),
+                                        ),
+                                        child: Text(post.community,
+                                            style: TextStyle(
+                                                fontSize: 10,
+                                                color: isDark ? Colors.white54 : Colors.grey[500],
+                                                fontWeight: FontWeight.w600)),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(post.title,
+                                      style: TextStyle(
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 13,
+                                          color: textColor)),
+                                  const SizedBox(height: 4),
+                                  Text(post.content,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                          fontSize: 12,
+                                          color: subColor,
+                                          height: 1.4)),
+                                ],
+                              ),
+                            ),
+                          ),
+                        )),
+
+                  const SizedBox(height: 24),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _infoItem(String value, String label, bool isDark) {
+    return Expanded(
+      child: Column(
+        children: [
+          Text(value,
+              style: const TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 14,
+                  color: AppTheme.primary)),
+          const SizedBox(height: 2),
+          Text(label,
+              style: TextStyle(
+                  fontSize: 11,
+                  color: isDark ? Colors.white38 : Colors.grey[400])),
+        ],
+      ),
+    );
+  }
+
+  Widget _divider() =>
+      Container(width: 1, height: 30, color: AppTheme.rose);
+
+  Widget _statCard(String value, String label, String emoji, bool isDark) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      decoration: BoxDecoration(
+        color: AppTheme.blush.withOpacity(isDark ? 0.3 : 1),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        children: [
+          Text(emoji, style: const TextStyle(fontSize: 20)),
+          const SizedBox(height: 4),
+          Text(value,
+              style: const TextStyle(
+                  fontWeight: FontWeight.w900,
+                  fontSize: 18,
+                  color: AppTheme.primary)),
+          Text(label,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                  fontSize: 10,
+                  color: isDark ? Colors.white54 : Colors.grey[500],
+                  fontWeight: FontWeight.w600)),
+        ],
+      ),
+    );
+  }
+}
