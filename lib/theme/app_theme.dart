@@ -42,7 +42,10 @@ class AppTheme {
         backgroundColor: primary,
         foregroundColor: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        textStyle: const TextStyle(fontFamily: 'Nunito', fontWeight: FontWeight.w700),
+        textStyle: const TextStyle(
+          fontFamily: 'Nunito',
+          fontWeight: FontWeight.w700,
+        ),
       ),
     ),
     inputDecorationTheme: InputDecorationTheme(

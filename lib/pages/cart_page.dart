@@ -23,7 +23,9 @@ class CartPage extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final textColor = isDark ? Colors.white : const Color(0xFF2D1B2E);
     final total = state.cart.fold<double>(
-        0, (sum, item) => sum + item.product.price * item.quantity);
+      0,
+      (sum, item) => sum + item.product.price * item.quantity,
+    );
 
     return Scaffold(
       appBar: AppBar(
@@ -44,16 +46,18 @@ class CartPage extends StatelessWidget {
                     Text(
                       'Keranjang masih kosong',
                       style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700,
-                          color: textColor),
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        color: textColor,
+                      ),
                     ),
                     const SizedBox(height: 8),
                     Text(
                       'Yuk temukan barang impianmu!',
                       style: TextStyle(
-                          fontSize: 13,
-                          color: isDark ? Colors.white54 : Colors.grey[500]),
+                        fontSize: 13,
+                        color: isDark ? Colors.white54 : Colors.grey[500],
+                      ),
                     ),
                     const SizedBox(height: 20),
                     ElevatedButton(
@@ -83,17 +87,45 @@ class CartPage extends StatelessWidget {
                                   decoration: BoxDecoration(
                                     color: Color(
                                       int.parse(
-                                        item.product.imageColor
-                                            .replaceFirst('#', 'FF'),
+                                        item.product.imageColor.replaceFirst(
+                                          '#',
+                                          'FF',
+                                        ),
                                         radix: 16,
                                       ),
                                     ),
                                     borderRadius: BorderRadius.circular(10),
                                   ),
-                                  child: Center(
-                                    child: Text(item.product.imageEmoji,
-                                        style:
-                                            const TextStyle(fontSize: 28)),
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(10),
+                                    child:
+                                        item.product.imageUrl != null &&
+                                            item.product.imageUrl!.isNotEmpty
+                                        ? Image.network(
+                                            item.product.imageUrl!,
+                                            fit: BoxFit.cover,
+                                            width: 60,
+                                            height: 60,
+                                            errorBuilder:
+                                                (context, error, stackTrace) {
+                                                  return Center(
+                                                    child: Text(
+                                                      item.product.imageEmoji,
+                                                      style: const TextStyle(
+                                                        fontSize: 28,
+                                                      ),
+                                                    ),
+                                                  );
+                                                },
+                                          )
+                                        : Center(
+                                            child: Text(
+                                              item.product.imageEmoji,
+                                              style: const TextStyle(
+                                                fontSize: 28,
+                                              ),
+                                            ),
+                                          ),
                                   ),
                                 ),
                                 const SizedBox(width: 12),
@@ -104,7 +136,7 @@ class CartPage extends StatelessWidget {
                                     children: [
                                       Text(
                                         item.product.name,
-                                        maxLines: 2,
+                                        maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                         style: TextStyle(
                                           fontWeight: FontWeight.w700,
@@ -112,23 +144,84 @@ class CartPage extends StatelessWidget {
                                           color: textColor,
                                         ),
                                       ),
-                                      const SizedBox(height: 4),
+                                      const SizedBox(height: 2),
                                       Text(
                                         'Rp ${_formatPrice(item.product.price)}',
                                         style: const TextStyle(
                                           fontWeight: FontWeight.w800,
-                                          fontSize: 14,
+                                          fontSize: 13,
                                           color: AppTheme.primary,
                                         ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Row(
+                                        children: [
+                                          GestureDetector(
+                                            onTap: () =>
+                                                state.decrementCartItem(item),
+                                            child: Container(
+                                              padding: const EdgeInsets.all(3),
+                                              decoration: BoxDecoration(
+                                                border: Border.all(
+                                                  color: isDark
+                                                      ? Colors.white24
+                                                      : Colors.grey[300]!,
+                                                ),
+                                                shape: BoxShape.circle,
+                                              ),
+                                              child: Icon(
+                                                Icons.remove,
+                                                size: 10,
+                                                color: textColor,
+                                              ),
+                                            ),
+                                          ),
+                                          Padding(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 8,
+                                            ),
+                                            child: Text(
+                                              '${item.quantity}',
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 12,
+                                                color: textColor,
+                                              ),
+                                            ),
+                                          ),
+                                          GestureDetector(
+                                            onTap: () =>
+                                                state.incrementCartItem(item),
+                                            child: Container(
+                                              padding: const EdgeInsets.all(3),
+                                              decoration: BoxDecoration(
+                                                border: Border.all(
+                                                  color: isDark
+                                                      ? Colors.white24
+                                                      : Colors.grey[300]!,
+                                                ),
+                                                shape: BoxShape.circle,
+                                              ),
+                                              child: Icon(
+                                                Icons.add,
+                                                size: 10,
+                                                color: textColor,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ],
                                   ),
                                 ),
                                 IconButton(
                                   onPressed: () =>
-                                      state.removeFromCart(item.product.id),
-                                  icon: Icon(Icons.delete_outline,
-                                      color: Colors.red[300], size: 20),
+                                      state.removeFromCart(item.id),
+                                  icon: Icon(
+                                    Icons.delete_outline,
+                                    color: Colors.red[300],
+                                    size: 20,
+                                  ),
                                 ),
                               ],
                             ),
@@ -154,11 +247,14 @@ class CartPage extends StatelessWidget {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text('Total',
-                                style: TextStyle(
-                                    fontWeight: FontWeight.w700,
-                                    color: textColor,
-                                    fontSize: 16)),
+                            Text(
+                              'Total',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w700,
+                                color: textColor,
+                                fontSize: 16,
+                              ),
+                            ),
                             Text(
                               'Rp ${_formatPrice(total)}',
                               style: const TextStyle(
@@ -176,8 +272,7 @@ class CartPage extends StatelessWidget {
                             onPressed: () {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
-                                  content:
-                                      const Text('Checkout berhasil! 🎉'),
+                                  content: const Text('Checkout berhasil! 🎉'),
                                   backgroundColor: AppTheme.primary,
                                   behavior: SnackBarBehavior.floating,
                                   shape: RoundedRectangleBorder(
@@ -188,13 +283,14 @@ class CartPage extends StatelessWidget {
                               Navigator.pop(context);
                             },
                             style: ElevatedButton.styleFrom(
-                              padding:
-                                  const EdgeInsets.symmetric(vertical: 16),
+                              padding: const EdgeInsets.symmetric(vertical: 16),
                             ),
                             child: Text(
                               'Checkout (${state.cart.length} item)',
                               style: const TextStyle(
-                                  fontSize: 15, fontWeight: FontWeight.w800),
+                                fontSize: 15,
+                                fontWeight: FontWeight.w800,
+                              ),
                             ),
                           ),
                         ),

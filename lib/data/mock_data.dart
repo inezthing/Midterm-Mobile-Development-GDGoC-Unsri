@@ -5,7 +5,8 @@ final List<Product> mockProducts = [
     id: 'p1',
     name: 'Hirono Plush Keychain',
     brand: 'Pop Mart',
-    description: 'Hirono blind box keychain, kondisi 90%, box sedikit penyok tapi figure mulus. Edisi Macaron Series. Cocok untuk kolektor!',
+    description:
+        'Hirono blind box keychain, kondisi 90%, box sedikit penyok tapi figure mulus. Edisi Macaron Series. Cocok untuk kolektor!',
     category: 'Keychain',
     price: 85000,
     condition: 'Preloved - Like New',
@@ -22,7 +23,8 @@ final List<Product> mockProducts = [
     id: 'p2',
     name: 'Pokemon TCG Booster Pack x5',
     brand: 'Pokemon Company',
-    description: 'Sealed booster pack Scarlet & Violet base set. Belum dibuka, beli buat investor. Harga nego dikit.',
+    description:
+        'Sealed booster pack Scarlet & Violet base set. Belum dibuka, beli buat investor. Harga nego dikit.',
     category: 'Playing Card',
     price: 320000,
     condition: 'Brand New - Sealed',
@@ -39,7 +41,8 @@ final List<Product> mockProducts = [
     id: 'p3',
     name: 'Mofusand Cat Tote Bag',
     brand: 'Mofusand',
-    description: 'Tote bag mofusand edisi sushi cat yang viral itu! Sudah dipakai 2x, kondisi sangat baik. Warna pink susu.',
+    description:
+        'Tote bag mofusand edisi sushi cat yang viral itu! Sudah dipakai 2x, kondisi sangat baik. Warna pink susu.',
     category: 'Woman Fashion',
     price: 145000,
     condition: 'Preloved - Good',
@@ -56,7 +59,8 @@ final List<Product> mockProducts = [
     id: 'p4',
     name: 'Snoopy Enamel Pin Set',
     brand: 'Peanuts',
-    description: 'Set 3 enamel pin Snoopy original dari toko Jepang. Kondisi mint, belum pernah dipakai di baju.',
+    description:
+        'Set 3 enamel pin Snoopy original dari toko Jepang. Kondisi mint, belum pernah dipakai di baju.',
     category: 'Trinket',
     price: 65000,
     condition: 'Brand New',
@@ -73,7 +77,8 @@ final List<Product> mockProducts = [
     id: 'p5',
     name: 'Oversized Cream Cardigan',
     brand: 'Uniqlo',
-    description: 'Cardigan oversized Uniqlo warna krem, size M tapi muat L juga. Dipakai musim dingin di Jepang, beli di sana langsung.',
+    description:
+        'Cardigan oversized Uniqlo warna krem, size M tapi muat L juga. Dipakai musim dingin di Jepang, beli di sana langsung.',
     category: 'Woman Fashion',
     price: 180000,
     condition: 'Preloved - Like New',
@@ -90,7 +95,8 @@ final List<Product> mockProducts = [
     id: 'p6',
     name: 'Converse All Star Low Pink',
     brand: 'Converse',
-    description: 'Converse classic low cut warna pink pastel. Beli di Converse official store, size 37. Hanya dipakai 3x.',
+    description:
+        'Converse classic low cut warna pink pastel. Beli di Converse official store, size 37. Hanya dipakai 3x.',
     category: 'Shoes',
     price: 350000,
     condition: 'Preloved - Like New',
@@ -107,7 +113,8 @@ final List<Product> mockProducts = [
     id: 'p7',
     name: 'Skintific Moisturizer 5X Ceramide',
     brand: 'Skintific',
-    description: 'Moisturizer Skintific 5X Ceramide masih 80% isi, baru dibeli 2 bulan lalu. Cocok kulit kering-normal.',
+    description:
+        'Moisturizer Skintific 5X Ceramide masih 80% isi, baru dibeli 2 bulan lalu. Cocok kulit kering-normal.',
     category: 'Health & Beauty',
     price: 95000,
     condition: 'Used - Good',
@@ -124,7 +131,8 @@ final List<Product> mockProducts = [
     id: 'p8',
     name: 'Nyota Star Trinket Box',
     brand: 'Nyota',
-    description: 'Trinket box edisi terbatas Nyota versi bintang. Enamel finish, bisa buat simpan cincin atau aksesoris kecil.',
+    description:
+        'Trinket box edisi terbatas Nyota versi bintang. Enamel finish, bisa buat simpan cincin atau aksesoris kecil.',
     category: 'Trinket',
     price: 120000,
     condition: 'Brand New - Unopened',
@@ -148,7 +156,8 @@ final List<CommunityPost> mockPosts = [
     community: 'Hirono',
     type: 'WTB',
     title: '[WTB] Hirono Macaron Series - Mint Chip',
-    content: 'Halo semua! Lagi nyari Hirono Macaron Series varian Mint Chip. Budget max 120rb include ongkir ke Jakarta. DM ya kalo ada yang mau jual 🙏',
+    content:
+        'Halo semua! Lagi nyari Hirono Macaron Series varian Mint Chip. Budget max 120rb include ongkir ke Jakarta. DM ya kalo ada yang mau jual 🙏',
     postedAt: DateTime.now().subtract(const Duration(hours: 3)),
     replies: ['Ada! DM ya', 'Aku punya, lagi cek kondisi dulu'],
     likes: 12,
@@ -161,9 +170,13 @@ final List<CommunityPost> mockPosts = [
     community: 'TCG Pokemon',
     type: 'Discussion',
     title: 'Scarlet & Violet Twilight Masquerade worth it gak sih?',
-    content: 'Guys, menurut kalian beli booster box Twilight Masquerade sekarang worth it? Harganya lagi turun tapi aku takut masih akan turun lagi. Ada yang udah buka?',
+    content:
+        'Guys, menurut kalian beli booster box Twilight Masquerade sekarang worth it? Harganya lagi turun tapi aku takut masih akan turun lagi. Ada yang udah buka?',
     postedAt: DateTime.now().subtract(const Duration(hours: 8)),
-    replies: ['Worth it! Charizard ex masih kenceng', 'Tergantung budget, mending nabung buat next set'],
+    replies: [
+      'Worth it! Charizard ex masih kenceng',
+      'Tergantung budget, mending nabung buat next set',
+    ],
     likes: 34,
   ),
   CommunityPost(
@@ -174,7 +187,8 @@ final List<CommunityPost> mockPosts = [
     community: 'Mofusand',
     type: 'WTS',
     title: '[WTS] Koleksi Mofusand bundling - JASTIP Jepang',
-    content: 'Jual bundling hasil jastip dari Jepang minggu lalu! Ada tote bag, sticker set, dan acrylic stand. Semua ori, bawa nota beli. Price: 250rb/bundle. Stok terbatas!',
+    content:
+        'Jual bundling hasil jastip dari Jepang minggu lalu! Ada tote bag, sticker set, dan acrylic stand. Semua ori, bawa nota beli. Price: 250rb/bundle. Stok terbatas!',
     postedAt: DateTime.now().subtract(const Duration(hours: 15)),
     replies: ['Mau! Berapa sisa stok?', 'DM aku pls 🙏', 'Wah cepetan deh'],
     likes: 56,
@@ -187,7 +201,8 @@ final List<CommunityPost> mockPosts = [
     community: 'Snoopy',
     type: 'Discussion',
     title: 'Rekomendasi tempat beli merch Snoopy ORI di Indonesia?',
-    content: 'Halo semuanya! Ada yang tau tempat beli merch Snoopy original di Indonesia selain mall? Online juga boleh, yang penting ori dan harga oke. Terima kasih 💕',
+    content:
+        'Halo semuanya! Ada yang tau tempat beli merch Snoopy original di Indonesia selain mall? Online juga boleh, yang penting ori dan harga oke. Terima kasih 💕',
     postedAt: DateTime.now().subtract(const Duration(days: 1)),
     replies: ['Coba di Isetan atau Sogo', 'Tokopedia ada yang official store'],
     likes: 28,
@@ -200,7 +215,8 @@ final List<CommunityPost> mockPosts = [
     community: 'Trinket',
     type: 'WTB',
     title: '[WTB] Nyota Celestial Series apapun',
-    content: 'Lagi cari Nyota series Celestial! Mau beli 1-3 pcs, budget 100rb/pcs sudah ongkir. Lokasi Palembang, bisa COD atau JNE.',
+    content:
+        'Lagi cari Nyota series Celestial! Mau beli 1-3 pcs, budget 100rb/pcs sudah ongkir. Lokasi Palembang, bisa COD atau JNE.',
     postedAt: DateTime.now().subtract(const Duration(days: 2)),
     replies: ['Aku punya moonstone!', 'Dm aku ya'],
     likes: 9,

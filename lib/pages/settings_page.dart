@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../data/app_state.dart';
 import '../theme/app_theme.dart';
+import '../data/supabase_service.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -58,28 +59,22 @@ class _SettingsPageState extends State<SettingsPage> {
                           children: [
                             _themeOption(
                               label: '☀️ Terang',
-                              isSelected:
-                                  state.themeMode == ThemeMode.light,
-                              onTap: () =>
-                                  state.setThemeMode(ThemeMode.light),
+                              isSelected: state.themeMode == ThemeMode.light,
+                              onTap: () => state.setThemeMode(ThemeMode.light),
                               isDark: isDark,
                             ),
                             const SizedBox(width: 8),
                             _themeOption(
                               label: '🌙 Gelap',
-                              isSelected:
-                                  state.themeMode == ThemeMode.dark,
-                              onTap: () =>
-                                  state.setThemeMode(ThemeMode.dark),
+                              isSelected: state.themeMode == ThemeMode.dark,
+                              onTap: () => state.setThemeMode(ThemeMode.dark),
                               isDark: isDark,
                             ),
                             const SizedBox(width: 8),
                             _themeOption(
                               label: '⚙️ Sistem',
-                              isSelected:
-                                  state.themeMode == ThemeMode.system,
-                              onTap: () =>
-                                  state.setThemeMode(ThemeMode.system),
+                              isSelected: state.themeMode == ThemeMode.system,
+                              onTap: () => state.setThemeMode(ThemeMode.system),
                               isDark: isDark,
                             ),
                           ],
@@ -106,14 +101,14 @@ class _SettingsPageState extends State<SettingsPage> {
                     textColor: textColor,
                   ),
                   Divider(
-                      color: isDark ? Colors.white10 : Colors.grey[100],
-                      height: 20),
+                    color: isDark ? Colors.white10 : Colors.grey[100],
+                    height: 20,
+                  ),
                   _switchRow(
                     label: '💰 Alert Harga',
                     subtitle: 'Notif saat harga produk favorit turun',
                     value: _priceAlertEnabled,
-                    onChanged: (v) =>
-                        setState(() => _priceAlertEnabled = v),
+                    onChanged: (v) => setState(() => _priceAlertEnabled = v),
                     isDark: isDark,
                     textColor: textColor,
                   ),
@@ -133,16 +128,18 @@ class _SettingsPageState extends State<SettingsPage> {
                     textColor: textColor,
                   ),
                   Divider(
-                      color: isDark ? Colors.white10 : Colors.grey[100],
-                      height: 20),
+                    color: isDark ? Colors.white10 : Colors.grey[100],
+                    height: 20,
+                  ),
                   _navRow(
                     label: '🔒 Keamanan & Privasi',
                     isDark: isDark,
                     textColor: textColor,
                   ),
                   Divider(
-                      color: isDark ? Colors.white10 : Colors.grey[100],
-                      height: 20),
+                    color: isDark ? Colors.white10 : Colors.grey[100],
+                    height: 20,
+                  ),
                   _navRow(
                     label: '📦 Pesanan Saya',
                     isDark: isDark,
@@ -160,21 +157,24 @@ class _SettingsPageState extends State<SettingsPage> {
                 children: [
                   _infoRow('Versi Aplikasi', '1.0.0', isDark, textColor),
                   Divider(
-                      color: isDark ? Colors.white10 : Colors.grey[100],
-                      height: 20),
+                    color: isDark ? Colors.white10 : Colors.grey[100],
+                    height: 20,
+                  ),
                   _infoRow('Developer', 'Whimsify Team', isDark, textColor),
                   Divider(
-                      color: isDark ? Colors.white10 : Colors.grey[100],
-                      height: 20),
+                    color: isDark ? Colors.white10 : Colors.grey[100],
+                    height: 20,
+                  ),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         '💚 Misi Kami',
                         style: TextStyle(
-                            fontWeight: FontWeight.w700,
-                            color: textColor,
-                            fontSize: 14),
+                          fontWeight: FontWeight.w700,
+                          color: textColor,
+                          fontSize: 14,
+                        ),
                       ),
                       const SizedBox(height: 6),
                       Text(
@@ -199,35 +199,51 @@ class _SettingsPageState extends State<SettingsPage> {
                     context: context,
                     builder: (ctx) => AlertDialog(
                       shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16)),
-                      title: const Text('Keluar dari akun?',
-                          style: TextStyle(fontWeight: FontWeight.w800)),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      title: const Text(
+                        'Keluar dari akun?',
+                        style: TextStyle(fontWeight: FontWeight.w800),
+                      ),
                       content: const Text(
-                          'Kamu akan keluar dari akun Whimsify kamu.'),
+                        'Kamu akan keluar dari akun Whimsify kamu.',
+                      ),
                       actions: [
                         TextButton(
                           onPressed: () => Navigator.pop(ctx),
-                          child: const Text('Batal',
-                              style: TextStyle(color: AppTheme.primary)),
+                          child: const Text(
+                            'Batal',
+                            style: TextStyle(color: AppTheme.primary),
+                          ),
                         ),
                         ElevatedButton(
-                          onPressed: () => Navigator.pop(ctx),
+                          onPressed: () async {
+                            Navigator.pop(ctx); // Tutup dialog
+                            Navigator.pop(context); // Tutup halaman Settings
+                            await SupabaseService().signOut();
+                          },
                           style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.red[400]),
+                            backgroundColor: Colors.red[400],
+                          ),
                           child: const Text('Keluar'),
                         ),
                       ],
                     ),
                   ),
                   icon: const Icon(Icons.logout, size: 16, color: Colors.red),
-                  label: const Text('Keluar',
-                      style: TextStyle(
-                          color: Colors.red, fontWeight: FontWeight.w700)),
+                  label: const Text(
+                    'Keluar',
+                    style: TextStyle(
+                      color: Colors.red,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                   style: OutlinedButton.styleFrom(
                     side: BorderSide(color: Colors.red[200]!),
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                 ),
               ),
@@ -245,7 +261,7 @@ class _SettingsPageState extends State<SettingsPage> {
       padding: const EdgeInsets.only(left: 4),
       child: Text(
         title,
-        style: TextStyle(
+        style: const TextStyle(
           fontSize: 12,
           fontWeight: FontWeight.w800,
           color: AppTheme.primary,
@@ -255,8 +271,7 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  Widget _settingsCard(
-      {required bool isDark, required List<Widget> children}) {
+  Widget _settingsCard({required bool isDark, required List<Widget> children}) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -325,16 +340,22 @@ class _SettingsPageState extends State<SettingsPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(label,
-                  style: TextStyle(
-                      fontWeight: FontWeight.w700,
-                      color: textColor,
-                      fontSize: 14)),
+              Text(
+                label,
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  color: textColor,
+                  fontSize: 14,
+                ),
+              ),
               const SizedBox(height: 2),
-              Text(subtitle,
-                  style: TextStyle(
-                      fontSize: 11,
-                      color: isDark ? Colors.white38 : Colors.grey[400])),
+              Text(
+                subtitle,
+                style: TextStyle(
+                  fontSize: 11,
+                  color: isDark ? Colors.white38 : Colors.grey[400],
+                ),
+              ),
             ],
           ),
         ),
@@ -347,40 +368,54 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  Widget _navRow(
-      {required String label,
-      required bool isDark,
-      required Color textColor}) {
+  Widget _navRow({
+    required String label,
+    required bool isDark,
+    required Color textColor,
+  }) {
     return GestureDetector(
       onTap: () {},
       child: Row(
         children: [
           Expanded(
-            child: Text(label,
-                style: TextStyle(
-                    fontWeight: FontWeight.w700,
-                    color: textColor,
-                    fontSize: 14)),
+            child: Text(
+              label,
+              style: TextStyle(
+                fontWeight: FontWeight.w700,
+                color: textColor,
+                fontSize: 14,
+              ),
+            ),
           ),
-          Icon(Icons.chevron_right,
-              color: isDark ? Colors.white30 : Colors.grey[300], size: 20),
+          Icon(
+            Icons.chevron_right,
+            color: isDark ? Colors.white30 : Colors.grey[300],
+            size: 20,
+          ),
         ],
       ),
     );
   }
 
-  Widget _infoRow(
-      String label, String value, bool isDark, Color textColor) {
+  Widget _infoRow(String label, String value, bool isDark, Color textColor) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label,
-            style: TextStyle(
-                fontWeight: FontWeight.w700, color: textColor, fontSize: 14)),
-        Text(value,
-            style: TextStyle(
-                fontSize: 13,
-                color: isDark ? Colors.white38 : Colors.grey[400])),
+        Text(
+          label,
+          style: TextStyle(
+            fontWeight: FontWeight.w700,
+            color: textColor,
+            fontSize: 14,
+          ),
+        ),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 13,
+            color: isDark ? Colors.white38 : Colors.grey[400],
+          ),
+        ),
       ],
     );
   }

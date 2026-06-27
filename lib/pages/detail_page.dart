@@ -64,10 +64,43 @@ class _DetailPageState extends State<DetailPage> {
                                 radix: 16,
                               ),
                             ),
-                            child: Center(
-                              child: Text(product.imageEmoji,
-                                  style: const TextStyle(fontSize: 100)),
-                            ),
+                            child:
+                                product.imageUrl != null &&
+                                    product.imageUrl!.isNotEmpty
+                                ? Image.network(
+                                    product.imageUrl!,
+                                    fit: BoxFit.cover,
+                                    loadingBuilder:
+                                        (context, child, loadingProgress) {
+                                          if (loadingProgress == null) {
+                                            return child;
+                                          }
+                                          return const Center(
+                                            child: SizedBox(
+                                              width: 40,
+                                              height: 40,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 3,
+                                                color: AppTheme.primary,
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return Center(
+                                        child: Text(
+                                          product.imageEmoji,
+                                          style: const TextStyle(fontSize: 100),
+                                        ),
+                                      );
+                                    },
+                                  )
+                                : Center(
+                                    child: Text(
+                                      product.imageEmoji,
+                                      style: const TextStyle(fontSize: 100),
+                                    ),
+                                  ),
                           ),
                         ),
                         Positioned(
@@ -81,10 +114,14 @@ class _DetailPageState extends State<DetailPage> {
                                 width: 40,
                                 height: 40,
                                 decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.9),
-                                    shape: BoxShape.circle),
-                                child: const Icon(Icons.arrow_back_ios_new,
-                                    size: 18, color: AppTheme.primary),
+                                  color: Colors.white.withOpacity(0.9),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.arrow_back_ios_new,
+                                  size: 18,
+                                  color: AppTheme.primary,
+                                ),
                               ),
                             ),
                           ),
@@ -95,8 +132,10 @@ class _DetailPageState extends State<DetailPage> {
                           child: Consumer<AppState>(
                             builder: (context, state, _) {
                               final isFav = state.products
-                                  .firstWhere((p) => p.id == product.id,
-                                      orElse: () => product)
+                                  .firstWhere(
+                                    (p) => p.id == product.id,
+                                    orElse: () => product,
+                                  )
                                   .isFavorite;
                               return GestureDetector(
                                 onTap: () => state.toggleFavorite(product.id),
@@ -104,12 +143,17 @@ class _DetailPageState extends State<DetailPage> {
                                   width: 40,
                                   height: 40,
                                   decoration: BoxDecoration(
-                                      color: Colors.white.withOpacity(0.9),
-                                      shape: BoxShape.circle),
+                                    color: Colors.white.withOpacity(0.9),
+                                    shape: BoxShape.circle,
+                                  ),
                                   child: Icon(
-                                    isFav ? Icons.favorite : Icons.favorite_border,
+                                    isFav
+                                        ? Icons.favorite
+                                        : Icons.favorite_border,
                                     size: 20,
-                                    color: isFav ? AppTheme.primary : Colors.grey[400],
+                                    color: isFav
+                                        ? AppTheme.primary
+                                        : Colors.grey[400],
                                   ),
                                 ),
                               );
@@ -132,25 +176,34 @@ class _DetailPageState extends State<DetailPage> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(product.name,
-                                        style: TextStyle(
-                                            fontSize: 20,
-                                            fontWeight: FontWeight.w800,
-                                            color: textColor)),
+                                    Text(
+                                      product.name,
+                                      style: TextStyle(
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.w800,
+                                        color: textColor,
+                                      ),
+                                    ),
                                     const SizedBox(height: 4),
-                                    Text(product.brand,
-                                        style: const TextStyle(
-                                            color: AppTheme.primary,
-                                            fontWeight: FontWeight.w600,
-                                            fontSize: 13)),
+                                    Text(
+                                      product.brand,
+                                      style: const TextStyle(
+                                        color: AppTheme.primary,
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 13,
+                                      ),
+                                    ),
                                   ],
                                 ),
                               ),
-                              Text('Rp ${_formatPrice(product.price)}',
-                                  style: const TextStyle(
-                                      fontSize: 22,
-                                      fontWeight: FontWeight.w900,
-                                      color: AppTheme.primary)),
+                              Text(
+                                'Rp ${_formatPrice(product.price)}',
+                                style: const TextStyle(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.w900,
+                                  color: AppTheme.primary,
+                                ),
+                              ),
                             ],
                           ),
 
@@ -161,57 +214,83 @@ class _DetailPageState extends State<DetailPage> {
                             children: [
                               _tag(product.category, Icons.category_outlined),
                               _tag(product.condition, Icons.star_outline),
-                              _tag('Size: ${product.size}', Icons.straighten_outlined),
+                              _tag(
+                                'Size: ${product.size}',
+                                Icons.straighten_outlined,
+                              ),
                             ],
                           ),
 
                           const SizedBox(height: 16),
-                          Divider(color: isDark ? Colors.white12 : Colors.grey[200]),
+                          Divider(
+                            color: isDark ? Colors.white12 : Colors.grey[200],
+                          ),
                           const SizedBox(height: 12),
 
-                          Text('Deskripsi',
-                              style: TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w800,
-                                  color: textColor)),
+                          Text(
+                            'Deskripsi',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w800,
+                              color: textColor,
+                            ),
+                          ),
                           const SizedBox(height: 8),
-                          Text(product.description,
-                              style: TextStyle(
-                                  fontSize: 13,
-                                  color: isDark ? Colors.white70 : Colors.grey[700],
-                                  height: 1.6)),
+                          Text(
+                            product.description,
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: isDark ? Colors.white70 : Colors.grey[700],
+                              height: 1.6,
+                            ),
+                          ),
 
                           const SizedBox(height: 16),
-                          Divider(color: isDark ? Colors.white12 : Colors.grey[200]),
+                          Divider(
+                            color: isDark ? Colors.white12 : Colors.grey[200],
+                          ),
                           const SizedBox(height: 12),
 
-                          Text('Metode Pembayaran',
-                              style: TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w800,
-                                  color: textColor)),
+                          Text(
+                            'Metode Pembayaran',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w800,
+                              color: textColor,
+                            ),
+                          ),
                           const SizedBox(height: 8),
                           Wrap(
                             spacing: 8,
                             runSpacing: 6,
                             children: product.paymentMethods
-                                .map((m) => Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 10, vertical: 5),
-                                      decoration: BoxDecoration(
-                                          color: AppTheme.blush,
-                                          borderRadius: BorderRadius.circular(20)),
-                                      child: Text(m,
-                                          style: const TextStyle(
-                                              fontSize: 11,
-                                              color: AppTheme.primaryDark,
-                                              fontWeight: FontWeight.w600)),
-                                    ))
+                                .map(
+                                  (m) => Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 5,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: AppTheme.blush,
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: Text(
+                                      m,
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        color: AppTheme.primaryDark,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                )
                                 .toList(),
                           ),
 
                           const SizedBox(height: 16),
-                          Divider(color: isDark ? Colors.white12 : Colors.grey[200]),
+                          Divider(
+                            color: isDark ? Colors.white12 : Colors.grey[200],
+                          ),
                           const SizedBox(height: 12),
 
                           Row(
@@ -220,9 +299,15 @@ class _DetailPageState extends State<DetailPage> {
                                 width: 44,
                                 height: 44,
                                 decoration: const BoxDecoration(
-                                    color: AppTheme.blush, shape: BoxShape.circle),
+                                  color: AppTheme.blush,
+                                  shape: BoxShape.circle,
+                                ),
                                 child: const Center(
-                                    child: Text('🛍️', style: TextStyle(fontSize: 20))),
+                                  child: Text(
+                                    '🛍️',
+                                    style: TextStyle(fontSize: 20),
+                                  ),
+                                ),
                               ),
                               const SizedBox(width: 12),
                               Expanded(
@@ -231,24 +316,33 @@ class _DetailPageState extends State<DetailPage> {
                                   children: [
                                     Row(
                                       children: [
-                                        Text('@${product.sellerName}',
-                                            style: TextStyle(
-                                                fontWeight: FontWeight.w700,
-                                                color: textColor,
-                                                fontSize: 14)),
+                                        Text(
+                                          '@${product.sellerName}',
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.w700,
+                                            color: textColor,
+                                            fontSize: 14,
+                                          ),
+                                        ),
                                         if (product.sellerVerified) ...[
                                           const SizedBox(width: 4),
-                                          const Icon(Icons.verified,
-                                              size: 14, color: AppTheme.primary),
-                                        ]
+                                          const Icon(
+                                            Icons.verified,
+                                            size: 14,
+                                            color: AppTheme.primary,
+                                          ),
+                                        ],
                                       ],
                                     ),
-                                    Text('Seller',
-                                        style: TextStyle(
-                                            fontSize: 11,
-                                            color: isDark
-                                                ? Colors.white54
-                                                : Colors.grey[500])),
+                                    Text(
+                                      'Seller',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: isDark
+                                            ? Colors.white54
+                                            : Colors.grey[500],
+                                      ),
+                                    ),
                                   ],
                                 ),
                               ),
@@ -257,26 +351,37 @@ class _DetailPageState extends State<DetailPage> {
 
                           const SizedBox(height: 16),
                           GestureDetector(
-                            onTap: () => setState(() => _chatVisible = !_chatVisible),
+                            onTap: () =>
+                                setState(() => _chatVisible = !_chatVisible),
                             child: Container(
                               padding: const EdgeInsets.all(14),
                               decoration: BoxDecoration(
-                                color: isDark ? const Color(0xFF3D2040) : AppTheme.blush,
+                                color: isDark
+                                    ? const Color(0xFF3D2040)
+                                    : AppTheme.blush,
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Row(
                                 children: [
-                                  const Icon(Icons.chat_bubble_outline,
-                                      color: AppTheme.primary, size: 20),
+                                  const Icon(
+                                    Icons.chat_bubble_outline,
+                                    color: AppTheme.primary,
+                                    size: 20,
+                                  ),
                                   const SizedBox(width: 10),
-                                  const Text('Chat seller untuk nego harga',
-                                      style: TextStyle(
-                                          color: AppTheme.primary,
-                                          fontWeight: FontWeight.w700,
-                                          fontSize: 13)),
+                                  const Text(
+                                    'Chat seller untuk nego harga',
+                                    style: TextStyle(
+                                      color: AppTheme.primary,
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 13,
+                                    ),
+                                  ),
                                   const Spacer(),
                                   Icon(
-                                    _chatVisible ? Icons.expand_less : Icons.expand_more,
+                                    _chatVisible
+                                        ? Icons.expand_less
+                                        : Icons.expand_more,
                                     color: AppTheme.primary,
                                   ),
                                 ],
@@ -294,25 +399,41 @@ class _DetailPageState extends State<DetailPage> {
                                     decoration: InputDecoration(
                                       hintText: 'Tulis penawaran...',
                                       hintStyle: TextStyle(
-                                          fontSize: 13, color: Colors.grey[400]),
-                                      contentPadding: const EdgeInsets.symmetric(
-                                          horizontal: 14, vertical: 10),
+                                        fontSize: 13,
+                                        color: Colors.grey[400],
+                                      ),
+                                      contentPadding:
+                                          const EdgeInsets.symmetric(
+                                            horizontal: 14,
+                                            vertical: 10,
+                                          ),
                                     ),
-                                    style: TextStyle(color: textColor, fontSize: 13),
+                                    style: TextStyle(
+                                      color: textColor,
+                                      fontSize: 13,
+                                    ),
                                   ),
                                 ),
                                 const SizedBox(width: 8),
                                 ElevatedButton(
                                   onPressed: () {
                                     if (_chatController.text.isNotEmpty) {
-                                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                                        content: Text(
-                                            'Pesan terkirim ke @${product.sellerName}!'),
-                                        backgroundColor: AppTheme.primary,
-                                        behavior: SnackBarBehavior.floating,
-                                        shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(10)),
-                                      ));
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            'Pesan terkirim ke @${product.sellerName}!',
+                                          ),
+                                          backgroundColor: AppTheme.primary,
+                                          behavior: SnackBarBehavior.floating,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              10,
+                                            ),
+                                          ),
+                                        ),
+                                      );
                                       _chatController.clear();
                                       setState(() => _chatVisible = false);
                                     }
@@ -338,9 +459,10 @@ class _DetailPageState extends State<DetailPage> {
                 color: bgColor,
                 boxShadow: [
                   BoxShadow(
-                      color: Colors.black.withOpacity(0.06),
-                      blurRadius: 12,
-                      offset: const Offset(0, -4))
+                    color: Colors.black.withOpacity(0.06),
+                    blurRadius: 12,
+                    offset: const Offset(0, -4),
+                  ),
                 ],
               ),
               child: Row(
@@ -349,18 +471,24 @@ class _DetailPageState extends State<DetailPage> {
                     child: ElevatedButton.icon(
                       onPressed: () {
                         context.read<AppState>().addToCart(product);
-                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                          content: const Text('Ditambahkan ke keranjang! 🛍️'),
-                          backgroundColor: AppTheme.primary,
-                          behavior: SnackBarBehavior.floating,
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10)),
-                        ));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: const Text(
+                              'Ditambahkan ke keranjang! 🛍️',
+                            ),
+                            backgroundColor: AppTheme.primary,
+                            behavior: SnackBarBehavior.floating,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                        );
                       },
                       icon: const Icon(Icons.shopping_bag_outlined, size: 18),
                       label: const Text('Masukkan Keranjang'),
                       style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 14)),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
                     ),
                   ),
                 ],
@@ -376,18 +504,22 @@ class _DetailPageState extends State<DetailPage> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-          border: Border.all(color: AppTheme.rose),
-          borderRadius: BorderRadius.circular(20)),
+        border: Border.all(color: AppTheme.rose),
+        borderRadius: BorderRadius.circular(20),
+      ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(icon, size: 12, color: AppTheme.primary),
           const SizedBox(width: 4),
-          Text(text,
-              style: const TextStyle(
-                  fontSize: 11,
-                  color: AppTheme.primaryDark,
-                  fontWeight: FontWeight.w600)),
+          Text(
+            text,
+            style: const TextStyle(
+              fontSize: 11,
+              color: AppTheme.primaryDark,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
         ],
       ),
     );

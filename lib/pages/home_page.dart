@@ -1,15 +1,72 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shimmer/shimmer.dart';
 import '../data/app_state.dart';
-import '../models/models.dart';
 import '../theme/app_theme.dart';
-import '../widgets/product_card.dart';
 import '../widgets/banner_carousel.dart';
 import '../widgets/category_slider.dart';
+import '../widgets/product_card.dart';
 import 'cart_page.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
+
+  Widget _buildShimmerGrid(int cols) {
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: cols,
+        childAspectRatio: 0.72,
+        crossAxisSpacing: 10,
+        mainAxisSpacing: 10,
+      ),
+      itemCount: cols * 2,
+      itemBuilder: (context, index) {
+        return Shimmer.fromColors(
+          baseColor: Colors.grey[300]!,
+          highlightColor: Colors.grey[100]!,
+          child: Card(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  flex: 5,
+                  child: Container(
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.vertical(
+                        top: Radius.circular(16),
+                      ),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  flex: 4,
+                  child: Padding(
+                    padding: const EdgeInsets.all(10),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(height: 12, width: 80, color: Colors.white),
+                        const SizedBox(height: 6),
+                        Container(height: 10, width: 50, color: Colors.white),
+                        const Spacer(),
+                        Container(height: 14, width: 70, color: Colors.white),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -20,199 +77,204 @@ class HomePage extends StatelessWidget {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
-        child: CustomScrollView(
-          slivers: [
-            // ── Header ──────────────────────────────────────────────────
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+        child: Consumer<AppState>(
+          builder: (context, state, _) {
+            final username = state.userProfile?['username'] ?? 'Nadia';
+
+            return CustomScrollView(
+              slivers: [
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          'Hi, Nadia! 🌷',
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Hi, $username! 🌷',
+                              style: TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.w800,
+                                color: textColor,
+                              ),
+                            ),
+                            Text(
+                              'Temukan barang kesayanganmu',
+                              style: TextStyle(fontSize: 13, color: subColor),
+                            ),
+                          ],
+                        ),
+                        Semantics(
+                          label: 'Keranjang belanja, ${state.cartCount} item',
+                          button: true,
+                          child: GestureDetector(
+                            onTap: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const CartPage(),
+                              ),
+                            ),
+                            child: Stack(
+                              children: [
+                                Container(
+                                  width: 44,
+                                  height: 44,
+                                  decoration: BoxDecoration(
+                                    color: isDark
+                                        ? const Color(0xFF3D2040)
+                                        : Colors.white,
+                                    borderRadius: BorderRadius.circular(12),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: AppTheme.primary.withOpacity(
+                                          0.12,
+                                        ),
+                                        blurRadius: 8,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  child: const Icon(
+                                    Icons.shopping_bag_outlined,
+                                    color: AppTheme.primary,
+                                  ),
+                                ),
+                                if (state.cartCount > 0)
+                                  Positioned(
+                                    right: 0,
+                                    top: 0,
+                                    child: Container(
+                                      padding: const EdgeInsets.all(4),
+                                      decoration: const BoxDecoration(
+                                        color: AppTheme.primary,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: Text(
+                                        '${state.cartCount}',
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w800,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SliverToBoxAdapter(
+                  child: Padding(
+                    padding: EdgeInsets.only(top: 20),
+                    child: BannerCarousel(),
+                  ),
+                ),
+                SliverToBoxAdapter(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
+                        child: Text(
+                          'Kategori',
                           style: TextStyle(
-                            fontSize: 22,
+                            fontSize: 16,
                             fontWeight: FontWeight.w800,
                             color: textColor,
                           ),
                         ),
-                        Text(
-                          'Temukan barang kesayanganmu',
-                          style: TextStyle(fontSize: 13, color: subColor),
-                        ),
-                      ],
-                    ),
-                    // Cart badge — Consumer terbatas
-                    Consumer<AppState>(
-                      builder: (context, state, _) => Semantics(
-                        label: 'Keranjang belanja, ${state.cartCount} item',
-                        button: true,
-                        child: GestureDetector(
-                          onTap: () => Navigator.push(context,
-                              MaterialPageRoute(
-                                  builder: (_) => const CartPage())),
-                          child: Stack(
-                            children: [
-                              Container(
-                                width: 44,
-                                height: 44,
-                                decoration: BoxDecoration(
-                                  color: isDark
-                                      ? const Color(0xFF3D2040)
-                                      : Colors.white,
-                                  borderRadius: BorderRadius.circular(12),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: AppTheme.primary.withOpacity(0.12),
-                                      blurRadius: 8,
-                                      offset: const Offset(0, 2),
-                                    ),
-                                  ],
-                                ),
-                                child: const Icon(Icons.shopping_bag_outlined,
-                                    color: AppTheme.primary, size: 22),
+                      ),
+                      const CategorySlider(),
+                    ],
+                  ),
+                ),
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 24, 20, 4),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              width: 4,
+                              height: 18,
+                              decoration: BoxDecoration(
+                                color: AppTheme.primary,
+                                borderRadius: BorderRadius.circular(2),
                               ),
-                              if (state.cartCount > 0)
-                                Positioned(
-                                  right: 0,
-                                  top: 0,
-                                  child: Container(
-                                    padding: const EdgeInsets.all(4),
-                                    decoration: const BoxDecoration(
-                                        color: AppTheme.primary,
-                                        shape: BoxShape.circle),
-                                    child: Text(
-                                      '${state.cartCount}',
-                                      style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.w800),
-                                    ),
-                                  ),
-                                ),
-                            ],
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Top Picks ✨',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w800,
+                                color: textColor,
+                              ),
+                            ),
+                          ],
+                        ),
+                        TextButton(
+                          onPressed: () {},
+                          child: const Text(
+                            'Lihat semua',
+                            style: TextStyle(
+                              color: AppTheme.primary,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 12,
+                            ),
                           ),
                         ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            // ── Banner ──────────────────────────────────────────────────
-            const SliverToBoxAdapter(
-              child: Padding(
-                padding: EdgeInsets.only(top: 20),
-                child: BannerCarousel(),
-              ),
-            ),
-
-            // ── Kategori ────────────────────────────────────────────────
-            SliverToBoxAdapter(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
-                    child: Text(
-                      'Kategori',
-                      style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
-                          color: textColor),
+                      ],
                     ),
                   ),
-                  const CategorySlider(),
-                ],
-              ),
-            ),
-
-            // ── Top Picks header ─────────────────────────────────────────
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 24, 20, 4),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          width: 4,
-                          height: 18,
-                          decoration: BoxDecoration(
-                            color: AppTheme.primary,
-                            borderRadius: BorderRadius.circular(2),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Top Picks ✨',
-                          style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w800,
-                              color: textColor),
-                        ),
-                      ],
-                    ),
-                    TextButton(
-                      onPressed: () {},
-                      child: const Text(
-                        'Lihat semua',
-                        style: TextStyle(
-                            color: AppTheme.primary,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 12),
-                      ),
-                    ),
-                  ],
                 ),
-              ),
-            ),
-
-            // ── Grid produk — LayoutBuilder wajib (rubrik C) ─────────────
-            Selector<AppState, List<Product>>(
-              selector: (_, state) => state.verifiedProducts,
-              builder: (context, products, _) {
-                return SliverPadding(
+                SliverPadding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   sliver: SliverToBoxAdapter(
-                    // LayoutBuilder untuk responsive breakpoint (rubrik C)
                     child: LayoutBuilder(
                       builder: (context, constraints) {
-                        final width = constraints.maxWidth;
-                        // Breakpoint sesuai spesifikasi:
-                        // < 600  → 2 kolom (mobile)
-                        // 600-999 → 2 kolom (tablet, sudah di dalam padding)
-                        // ≥ 1000  → 4 kolom (desktop)
                         final screenWidth = MediaQuery.of(context).size.width;
-                        int cols;
-                        if (screenWidth >= 1000) {
-                          cols = 4;
-                        } else if (screenWidth >= 600) {
-                          cols = 3;
-                        } else {
-                          cols = 2;
+                        final cols = screenWidth >= 1000
+                            ? 4
+                            : screenWidth >= 600
+                            ? 3
+                            : 2;
+
+                        if (state.isLoading) {
+                          return _buildShimmerGrid(cols);
                         }
 
-                        final itemWidth =
-                            (constraints.maxWidth - (cols - 1) * 10) / cols;
-                        final itemHeight = itemWidth / 0.72;
+                        final products = state.verifiedProducts;
+                        if (products.isEmpty) {
+                          return const Center(
+                            child: Padding(
+                              padding: EdgeInsets.symmetric(vertical: 40),
+                              child: Text(
+                                'Belum ada produk terverifikasi 🛍️',
+                                style: TextStyle(fontWeight: FontWeight.w600),
+                              ),
+                            ),
+                          );
+                        }
 
                         return GridView.builder(
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
                           gridDelegate:
                               SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: cols,
-                            childAspectRatio: 0.72,
-                            crossAxisSpacing: 10,
-                            mainAxisSpacing: 10,
-                          ),
+                                crossAxisCount: cols,
+                                childAspectRatio: 0.72,
+                                crossAxisSpacing: 10,
+                                mainAxisSpacing: 10,
+                              ),
                           itemCount: products.length,
                           itemBuilder: (context, index) =>
                               ProductCard(product: products[index]),
@@ -220,12 +282,11 @@ class HomePage extends StatelessWidget {
                       },
                     ),
                   ),
-                );
-              },
-            ),
-
-            const SliverToBoxAdapter(child: SizedBox(height: 20)),
-          ],
+                ),
+                const SliverToBoxAdapter(child: SizedBox(height: 20)),
+              ],
+            );
+          },
         ),
       ),
     );

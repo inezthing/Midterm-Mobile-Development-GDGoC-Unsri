@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../data/app_state.dart';
-import '../models/models.dart';
 import '../theme/app_theme.dart';
 import '../widgets/product_card.dart';
 import 'settings_page.dart';
+import '../data/supabase_service.dart';
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
@@ -18,8 +18,15 @@ class ProfilePage extends StatelessWidget {
         final isDark = Theme.of(context).brightness == Brightness.dark;
         final textColor = isDark ? Colors.white : const Color(0xFF2D1B2E);
         final subColor = isDark ? Colors.white54 : Colors.grey[500]!;
-        final myProducts = state.products.where((p) => p.sellerId == 'u1').toList();
-        final myPosts = state.posts.where((p) => p.userId == 'u1').toList();
+        final currentUserId = SupabaseService().currentUser?.id;
+        final myProducts = state.products
+            .where((p) => p.sellerId == currentUserId)
+            .toList();
+        final myPosts = state.posts
+            .where((p) => p.userId == currentUserId)
+            .toList();
+        final username = state.userProfile?['username'] ?? 'User';
+        final avatarUrl = state.userProfile?['avatar_url'] ?? '🐰';
 
         return Scaffold(
           body: SafeArea(
@@ -44,21 +51,27 @@ class ProfilePage extends StatelessWidget {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              const Text('Profil',
-                                  style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.w800)),
+                              const Text(
+                                'Profil',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
                               Semantics(
                                 label: 'Buka pengaturan',
                                 child: IconButton(
                                   onPressed: () => Navigator.push(
                                     context,
                                     MaterialPageRoute(
-                                        builder: (_) => const SettingsPage()),
+                                      builder: (_) => const SettingsPage(),
+                                    ),
                                   ),
-                                  icon: const Icon(Icons.settings_outlined,
-                                      color: Colors.white),
+                                  icon: const Icon(
+                                    Icons.settings_outlined,
+                                    color: Colors.white,
+                                  ),
                                 ),
                               ),
                             ],
@@ -71,19 +84,33 @@ class ProfilePage extends StatelessWidget {
                               color: Colors.white.withOpacity(0.2),
                               shape: BoxShape.circle,
                               border: Border.all(
-                                  color: Colors.white.withOpacity(0.5), width: 2),
+                                color: Colors.white.withOpacity(0.5),
+                                width: 2,
+                              ),
                             ),
-                            child: const Center(
-                                child: Text('🌷', style: TextStyle(fontSize: 36))),
+                            child: Center(
+                              child: Text(
+                                avatarUrl,
+                                style: const TextStyle(fontSize: 36),
+                              ),
+                            ),
                           ),
                           const SizedBox(height: 12),
-                          const Text('Nadia Putri',
-                              style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.w800)),
-                          const Text('@you',
-                              style: TextStyle(color: Colors.white70, fontSize: 13)),
+                          Text(
+                            username,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 20,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          Text(
+                            '@$username',
+                            style: const TextStyle(
+                              color: Colors.white70,
+                              fontSize: 13,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -98,9 +125,10 @@ class ProfilePage extends StatelessWidget {
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2))
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
                       ],
                     ),
                     child: Row(
@@ -124,16 +152,32 @@ class ProfilePage extends StatelessWidget {
                     ),
                     child: Row(
                       children: [
-                        Expanded(child: _statCard('${myProducts.length}', 'Produk Dijual', '🛍️', isDark)),
+                        Expanded(
+                          child: _statCard(
+                            '${myProducts.length}',
+                            'Produk Dijual',
+                            '🛍️',
+                            isDark,
+                          ),
+                        ),
                         const SizedBox(width: 10),
                         Expanded(
-                            child: _statCard(
-                                '${state.products.where((p) => p.isFavorite).length}',
-                                'Favorit',
-                                '❤️',
-                                isDark)),
+                          child: _statCard(
+                            '${state.products.where((p) => p.isFavorite).length}',
+                            'Favorit',
+                            '❤️',
+                            isDark,
+                          ),
+                        ),
                         const SizedBox(width: 10),
-                        Expanded(child: _statCard('${myPosts.length}', 'Postingan', '💬', isDark)),
+                        Expanded(
+                          child: _statCard(
+                            '${myPosts.length}',
+                            'Postingan',
+                            '💬',
+                            isDark,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -147,15 +191,19 @@ class ProfilePage extends StatelessWidget {
                           width: 4,
                           height: 16,
                           decoration: BoxDecoration(
-                              color: AppTheme.primary,
-                              borderRadius: BorderRadius.circular(2)),
+                            color: AppTheme.primary,
+                            borderRadius: BorderRadius.circular(2),
+                          ),
                         ),
                         const SizedBox(width: 8),
-                        Text('Produk Saya',
-                            style: TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w800,
-                                color: textColor)),
+                        Text(
+                          'Produk Saya',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w800,
+                            color: textColor,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -168,11 +216,14 @@ class ProfilePage extends StatelessWidget {
                           children: [
                             const Text('🛍️', style: TextStyle(fontSize: 40)),
                             const SizedBox(height: 8),
-                            Text('Belum ada produk dijual',
-                                style: TextStyle(
-                                    color: subColor,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600)),
+                            Text(
+                              'Belum ada produk dijual',
+                              style: TextStyle(
+                                color: subColor,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -203,15 +254,19 @@ class ProfilePage extends StatelessWidget {
                           width: 4,
                           height: 16,
                           decoration: BoxDecoration(
-                              color: AppTheme.primary,
-                              borderRadius: BorderRadius.circular(2)),
+                            color: AppTheme.primary,
+                            borderRadius: BorderRadius.circular(2),
+                          ),
                         ),
                         const SizedBox(width: 8),
-                        Text('Postingan Komunitas',
-                            style: TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w800,
-                                color: textColor)),
+                        Text(
+                          'Postingan Komunitas',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w800,
+                            color: textColor,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -220,71 +275,97 @@ class ProfilePage extends StatelessWidget {
                     Padding(
                       padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
                       child: Center(
-                        child: Text('Belum ada postingan di komunitas',
-                            style: TextStyle(
-                                color: subColor,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600)),
+                        child: Text(
+                          'Belum ada postingan di komunitas',
+                          style: TextStyle(
+                            color: subColor,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       ),
                     )
                   else
-                    ...myPosts.map((post) => Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-                          child: Card(
-                            child: Padding(
-                              padding: const EdgeInsets.all(14),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 8, vertical: 3),
-                                        decoration: BoxDecoration(
-                                            color: AppTheme.blush,
-                                            borderRadius: BorderRadius.circular(6)),
-                                        child: Text(post.type,
-                                            style: const TextStyle(
-                                                fontSize: 10,
-                                                color: AppTheme.primary,
-                                                fontWeight: FontWeight.w700)),
+                    ...myPosts.map(
+                      (post) => Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+                        child: Card(
+                          child: Padding(
+                            padding: const EdgeInsets.all(14),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 3,
                                       ),
-                                      const SizedBox(width: 6),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 8, vertical: 3),
-                                        decoration: BoxDecoration(
-                                          color: isDark ? Colors.white10 : Colors.grey[100],
-                                          borderRadius: BorderRadius.circular(6),
-                                        ),
-                                        child: Text(post.community,
-                                            style: TextStyle(
-                                                fontSize: 10,
-                                                color: isDark ? Colors.white54 : Colors.grey[500],
-                                                fontWeight: FontWeight.w600)),
+                                      decoration: BoxDecoration(
+                                        color: AppTheme.blush,
+                                        borderRadius: BorderRadius.circular(6),
                                       ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Text(post.title,
-                                      style: TextStyle(
+                                      child: Text(
+                                        post.type,
+                                        style: const TextStyle(
+                                          fontSize: 10,
+                                          color: AppTheme.primary,
                                           fontWeight: FontWeight.w700,
-                                          fontSize: 13,
-                                          color: textColor)),
-                                  const SizedBox(height: 4),
-                                  Text(post.content,
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(
-                                          fontSize: 12,
-                                          color: subColor,
-                                          height: 1.4)),
-                                ],
-                              ),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 3,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: isDark
+                                            ? Colors.white10
+                                            : Colors.grey[100],
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Text(
+                                        post.community,
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          color: isDark
+                                              ? Colors.white54
+                                              : Colors.grey[500],
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  post.title,
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 13,
+                                    color: textColor,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  post.content,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: subColor,
+                                    height: 1.4,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                        )),
+                        ),
+                      ),
+                    ),
 
                   const SizedBox(height: 24),
                 ],
@@ -300,23 +381,28 @@ class ProfilePage extends StatelessWidget {
     return Expanded(
       child: Column(
         children: [
-          Text(value,
-              style: const TextStyle(
-                  fontWeight: FontWeight.w800,
-                  fontSize: 14,
-                  color: AppTheme.primary)),
+          Text(
+            value,
+            style: const TextStyle(
+              fontWeight: FontWeight.w800,
+              fontSize: 14,
+              color: AppTheme.primary,
+            ),
+          ),
           const SizedBox(height: 2),
-          Text(label,
-              style: TextStyle(
-                  fontSize: 11,
-                  color: isDark ? Colors.white38 : Colors.grey[400])),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              color: isDark ? Colors.white38 : Colors.grey[400],
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _divider() =>
-      Container(width: 1, height: 30, color: AppTheme.rose);
+  Widget _divider() => Container(width: 1, height: 30, color: AppTheme.rose);
 
   Widget _statCard(String value, String label, String emoji, bool isDark) {
     return Container(
@@ -329,17 +415,23 @@ class ProfilePage extends StatelessWidget {
         children: [
           Text(emoji, style: const TextStyle(fontSize: 20)),
           const SizedBox(height: 4),
-          Text(value,
-              style: const TextStyle(
-                  fontWeight: FontWeight.w900,
-                  fontSize: 18,
-                  color: AppTheme.primary)),
-          Text(label,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                  fontSize: 10,
-                  color: isDark ? Colors.white54 : Colors.grey[500],
-                  fontWeight: FontWeight.w600)),
+          Text(
+            value,
+            style: const TextStyle(
+              fontWeight: FontWeight.w900,
+              fontSize: 18,
+              color: AppTheme.primary,
+            ),
+          ),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 10,
+              color: isDark ? Colors.white54 : Colors.grey[500],
+              fontWeight: FontWeight.w600,
+            ),
+          ),
         ],
       ),
     );

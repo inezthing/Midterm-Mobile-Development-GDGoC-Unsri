@@ -1,8 +1,11 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:image_picker/image_picker.dart';
 import '../data/app_state.dart';
 import '../models/models.dart';
 import '../theme/app_theme.dart';
+import '../data/supabase_service.dart';
 
 class SellPage extends StatefulWidget {
   const SellPage({super.key});
@@ -23,19 +26,51 @@ class _SellPageState extends State<SellPage> {
   String _selectedCondition = 'Preloved - Like New';
   final List<String> _selectedPayments = [];
   bool _hasUnsavedChanges = false;
+  bool _isLoading = false;
+
+  File? _imageFile;
+  final _picker = ImagePicker();
+
+  Future<void> _pickImage() async {
+    try {
+      final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
+      if (pickedFile != null) {
+        setState(() {
+          _imageFile = File(pickedFile.path);
+          _markChanged();
+        });
+      }
+    } catch (e) {
+      debugPrint('Error picking image: $e');
+    }
+  }
 
   static const List<String> _categories = [
-    'Woman Fashion', 'Man Fashion', 'Health & Beauty',
-    'Keychain', 'Trinket', 'Shoes', 'Playing Card', 'Sticker',
+    'Woman Fashion',
+    'Man Fashion',
+    'Health & Beauty',
+    'Keychain',
+    'Trinket',
+    'Shoes',
+    'Playing Card',
+    'Sticker',
   ];
 
   static const List<String> _conditions = [
-    'Brand New - Sealed', 'Brand New', 'Preloved - Like New',
-    'Preloved - Good', 'Used - Good',
+    'Brand New - Sealed',
+    'Brand New',
+    'Preloved - Like New',
+    'Preloved - Good',
+    'Used - Good',
   ];
 
   static const List<String> _paymentOptions = [
-    'Transfer Bank', 'GoPay', 'OVO', 'DANA', 'ShopeePay', 'COD',
+    'Transfer Bank',
+    'GoPay',
+    'OVO',
+    'DANA',
+    'ShopeePay',
+    'COD',
   ];
 
   @override
@@ -58,15 +93,20 @@ class _SellPageState extends State<SellPage> {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Batalkan listing?',
-            style: TextStyle(fontWeight: FontWeight.w800)),
+        title: const Text(
+          'Batalkan listing?',
+          style: TextStyle(fontWeight: FontWeight.w800),
+        ),
         content: const Text(
-            'Data yang sudah kamu isi akan hilang. Yakin mau keluar?'),
+          'Data yang sudah kamu isi akan hilang. Yakin mau keluar?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Lanjutkan isi',
-                style: TextStyle(color: AppTheme.primary)),
+            child: const Text(
+              'Lanjutkan isi',
+              style: TextStyle(color: AppTheme.primary),
+            ),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
@@ -79,7 +119,7 @@ class _SellPageState extends State<SellPage> {
     return result ?? false;
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedPayments.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -87,71 +127,91 @@ class _SellPageState extends State<SellPage> {
           content: const Text('Pilih minimal satu metode pembayaran'),
           backgroundColor: Colors.red[400],
           behavior: SnackBarBehavior.floating,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
         ),
       );
       return;
     }
 
-    final product = Product(
-      id: 'p${DateTime.now().millisecondsSinceEpoch}',
-      name: _nameController.text.trim(),
-      brand: _brandController.text.trim(),
-      description: _descController.text.trim(),
-      category: _selectedCategory,
-      price: double.parse(_priceController.text.trim()),
-      condition: _selectedCondition,
-      size: _sizeController.text.trim().isEmpty
-          ? 'One Size'
-          : _sizeController.text.trim(),
-      sellerId: 'u1',
-      sellerName: 'you',
-      sellerVerified: false,
-      imageEmoji: '🛍️',
-      imageColor: '#F8BBD9',
-      listedAt: DateTime.now(),
-      paymentMethods: List.from(_selectedPayments),
-    );
+    setState(() => _isLoading = true);
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
 
-    context.read<AppState>().addProduct(product);
-    setState(() => _hasUnsavedChanges = false);
+    try {
+      String? imageUrl;
+      if (_imageFile != null) {
+        imageUrl = await SupabaseService().uploadProductImage(_imageFile!);
+      }
 
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('🎉', style: TextStyle(fontSize: 48)),
-            const SizedBox(height: 12),
-            const Text(
-              'Produk berhasil dilisting!',
-              style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              '${_nameController.text} sudah aktif dan bisa ditemukan pembeli.',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+      final product = await SupabaseService().createProduct(
+        name: _nameController.text.trim(),
+        brand: _brandController.text.trim(),
+        description: _descController.text.trim(),
+        category: _selectedCategory,
+        price: double.parse(_priceController.text.trim()),
+        condition: _selectedCondition,
+        size: _sizeController.text.trim().isEmpty
+            ? 'One Size'
+            : _sizeController.text.trim(),
+        imageUrl: imageUrl,
+        paymentMethods: List.from(_selectedPayments),
+      );
+
+      if (!mounted) return;
+      context.read<AppState>().addProduct(product);
+      setState(() => _hasUnsavedChanges = false);
+
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('🎉', style: TextStyle(fontSize: 48)),
+              const SizedBox(height: 12),
+              const Text(
+                'Produk berhasil dilisting!',
+                style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '${_nameController.text} sudah aktif dan bisa ditemukan pembeli.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+              ),
+            ],
+          ),
+          actions: [
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(ctx);
+                Navigator.pop(context);
+              },
+              style: ElevatedButton.styleFrom(
+                minimumSize: const Size(double.infinity, 44),
+              ),
+              child: const Text('Lihat di Explore'),
             ),
           ],
         ),
-        actions: [
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              Navigator.pop(context);
-            },
-            style: ElevatedButton.styleFrom(
-                minimumSize: const Size(double.infinity, 44)),
-            child: const Text('Lihat di Explore'),
-          ),
-        ],
-      ),
-    );
+      );
+    } catch (e) {
+      scaffoldMessenger.showSnackBar(
+        SnackBar(
+          content: Text('Gagal melisting produk: ${e.toString()}'),
+          backgroundColor: Colors.red[400],
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 
   @override
@@ -202,9 +262,9 @@ class _SellPageState extends State<SellPage> {
                             label: 'Tombol tambah foto produk',
                             button: true,
                             child: GestureDetector(
-                              onTap: () {},
+                              onTap: _isLoading ? null : _pickImage,
                               child: Container(
-                                height: 140,
+                                height: 160,
                                 width: double.infinity,
                                 decoration: BoxDecoration(
                                   color: isDark
@@ -212,27 +272,65 @@ class _SellPageState extends State<SellPage> {
                                       : AppTheme.blush,
                                   borderRadius: BorderRadius.circular(16),
                                   border: Border.all(
-                                      color: AppTheme.rose, width: 2),
+                                    color: AppTheme.rose,
+                                    width: 2,
+                                  ),
+                                  image: _imageFile != null
+                                      ? DecorationImage(
+                                          image: FileImage(_imageFile!),
+                                          fit: BoxFit.cover,
+                                        )
+                                      : null,
                                 ),
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    const Text('📷',
-                                        style: TextStyle(fontSize: 36)),
-                                    const SizedBox(height: 8),
-                                    const Text('Tambah Foto',
-                                        style: TextStyle(
-                                            color: AppTheme.primary,
-                                            fontWeight: FontWeight.w700,
-                                            fontSize: 14)),
-                                    Text('Tap untuk pilih dari galeri',
-                                        style: TextStyle(
-                                            color: isDark
-                                                ? Colors.white38
-                                                : Colors.grey[400],
-                                            fontSize: 11)),
-                                  ],
-                                ),
+                                child: _imageFile == null
+                                    ? Column(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          const Text(
+                                            '📷',
+                                            style: TextStyle(fontSize: 36),
+                                          ),
+                                          const SizedBox(height: 8),
+                                          const Text(
+                                            'Tambah Foto',
+                                            style: TextStyle(
+                                              color: AppTheme.primary,
+                                              fontWeight: FontWeight.w700,
+                                              fontSize: 14,
+                                            ),
+                                          ),
+                                          Text(
+                                            'Tap untuk pilih dari galeri',
+                                            style: TextStyle(
+                                              color: isDark
+                                                  ? Colors.white38
+                                                  : Colors.grey[400],
+                                              fontSize: 11,
+                                            ),
+                                          ),
+                                        ],
+                                      )
+                                    : Align(
+                                        alignment: Alignment.topRight,
+                                        child: Container(
+                                          margin: const EdgeInsets.all(8),
+                                          decoration: const BoxDecoration(
+                                            color: Colors.black54,
+                                            shape: BoxShape.circle,
+                                          ),
+                                          child: IconButton(
+                                            icon: const Icon(
+                                              Icons.close,
+                                              color: Colors.white,
+                                              size: 18,
+                                            ),
+                                            onPressed: () => setState(
+                                              () => _imageFile = null,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
                               ),
                             ),
                           ),
@@ -248,10 +346,12 @@ class _SellPageState extends State<SellPage> {
                             hint: 'Contoh: Hirono Macaron Keychain',
                             onChanged: (_) => _markChanged(),
                             validator: (v) {
-                              if (v == null || v.trim().isEmpty)
+                              if (v == null || v.trim().isEmpty) {
                                 return 'Nama produk wajib diisi';
-                              if (v.trim().length < 3)
+                              }
+                              if (v.trim().length < 3) {
                                 return 'Minimal 3 karakter';
+                              }
                               return null;
                             },
                           ),
@@ -264,8 +364,9 @@ class _SellPageState extends State<SellPage> {
                             hint: 'Contoh: Pop Mart, Uniqlo',
                             onChanged: (_) => _markChanged(),
                             validator: (v) {
-                              if (v == null || v.trim().isEmpty)
+                              if (v == null || v.trim().isEmpty) {
                                 return 'Merek wajib diisi';
+                              }
                               return null;
                             },
                           ),
@@ -348,17 +449,20 @@ class _SellPageState extends State<SellPage> {
                               hintText:
                                   'Ceritakan kondisi, alasan jual, kelengkapan...',
                               hintStyle: TextStyle(
-                                  color: isDark
-                                      ? Colors.white38
-                                      : Colors.grey[400],
-                                  fontSize: 12),
+                                color: isDark
+                                    ? Colors.white38
+                                    : Colors.grey[400],
+                                fontSize: 12,
+                              ),
                               alignLabelWithHint: true,
                             ),
                             validator: (v) {
-                              if (v == null || v.trim().isEmpty)
+                              if (v == null || v.trim().isEmpty) {
                                 return 'Deskripsi wajib diisi';
-                              if (v.trim().length < 10)
+                              }
+                              if (v.trim().length < 10) {
                                 return 'Minimal 10 karakter';
+                              }
                               return null;
                             },
                           ),
@@ -375,11 +479,13 @@ class _SellPageState extends State<SellPage> {
                             keyboardType: TextInputType.number,
                             onChanged: (_) => _markChanged(),
                             validator: (v) {
-                              if (v == null || v.trim().isEmpty)
+                              if (v == null || v.trim().isEmpty) {
                                 return 'Harga wajib diisi';
+                              }
                               final parsed = double.tryParse(v.trim());
-                              if (parsed == null || parsed <= 0)
+                              if (parsed == null || parsed <= 0) {
                                 return 'Masukkan harga yang valid';
+                              }
                               return null;
                             },
                           ),
@@ -388,11 +494,10 @@ class _SellPageState extends State<SellPage> {
                           Text(
                             'Metode Pembayaran',
                             style: TextStyle(
-                                color: isDark
-                                    ? Colors.white70
-                                    : Colors.grey[700],
-                                fontSize: 13,
-                                fontWeight: FontWeight.w700),
+                              color: isDark ? Colors.white70 : Colors.grey[700],
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
                           const SizedBox(height: 8),
                           // Wrap untuk chip pembayaran (rubrik B)
@@ -400,10 +505,12 @@ class _SellPageState extends State<SellPage> {
                             spacing: 8,
                             runSpacing: 8,
                             children: _paymentOptions.map((option) {
-                              final isSelected =
-                                  _selectedPayments.contains(option);
+                              final isSelected = _selectedPayments.contains(
+                                option,
+                              );
                               return Semantics(
-                                label: '$option, ${isSelected ? 'dipilih' : 'belum dipilih'}',
+                                label:
+                                    '$option, ${isSelected ? 'dipilih' : 'belum dipilih'}',
                                 button: true,
                                 child: GestureDetector(
                                   onTap: () {
@@ -417,18 +524,18 @@ class _SellPageState extends State<SellPage> {
                                     });
                                   },
                                   child: AnimatedContainer(
-                                    duration:
-                                        const Duration(milliseconds: 150),
+                                    duration: const Duration(milliseconds: 150),
                                     padding: const EdgeInsets.symmetric(
-                                        horizontal: 14, vertical: 8),
+                                      horizontal: 14,
+                                      vertical: 8,
+                                    ),
                                     decoration: BoxDecoration(
                                       color: isSelected
                                           ? AppTheme.primary
                                           : (isDark
-                                              ? const Color(0xFF3D2040)
-                                              : AppTheme.blush),
-                                      borderRadius:
-                                          BorderRadius.circular(20),
+                                                ? const Color(0xFF3D2040)
+                                                : AppTheme.blush),
+                                      borderRadius: BorderRadius.circular(20),
                                     ),
                                     child: Text(
                                       option,
@@ -450,15 +557,28 @@ class _SellPageState extends State<SellPage> {
                           SizedBox(
                             width: double.infinity,
                             child: ElevatedButton.icon(
-                              onPressed: _submit,
-                              icon: const Icon(Icons.sell_outlined, size: 18),
-                              label: const Text('Listing Sekarang!'),
+                              onPressed: _isLoading ? null : _submit,
+                              icon: _isLoading
+                                  ? null
+                                  : const Icon(Icons.sell_outlined, size: 18),
+                              label: _isLoading
+                                  ? const SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Colors.white,
+                                      ),
+                                    )
+                                  : const Text('Listing Sekarang!'),
                               style: ElevatedButton.styleFrom(
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 16),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 16,
+                                ),
                                 textStyle: const TextStyle(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w800),
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w800,
+                                ),
                               ),
                             ),
                           ),
@@ -483,14 +603,19 @@ class _SellPageState extends State<SellPage> {
           width: 4,
           height: 16,
           decoration: BoxDecoration(
-              color: AppTheme.primary, borderRadius: BorderRadius.circular(2)),
+            color: AppTheme.primary,
+            borderRadius: BorderRadius.circular(2),
+          ),
         ),
         const SizedBox(width: 8),
-        Text(label,
-            style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w800,
-                color: textColor)),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w800,
+            color: textColor,
+          ),
+        ),
       ],
     );
   }
@@ -510,13 +635,16 @@ class _SellPageState extends State<SellPage> {
       keyboardType: keyboardType,
       onChanged: onChanged,
       style: TextStyle(
-          color: isDark ? Colors.white : const Color(0xFF2D1B2E),
-          fontSize: 13),
+        color: isDark ? Colors.white : const Color(0xFF2D1B2E),
+        fontSize: 13,
+      ),
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
         hintStyle: TextStyle(
-            color: isDark ? Colors.white38 : Colors.grey[400], fontSize: 12),
+          color: isDark ? Colors.white38 : Colors.grey[400],
+          fontSize: 12,
+        ),
       ),
       validator: validator,
     );
@@ -531,12 +659,13 @@ class _SellPageState extends State<SellPage> {
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return DropdownButtonFormField<String>(
-      value: value,
+      initialValue: value,
       decoration: InputDecoration(labelText: label),
       style: TextStyle(
-          color: isDark ? Colors.white : const Color(0xFF2D1B2E),
-          fontSize: 13,
-          fontFamily: 'Nunito'),
+        color: isDark ? Colors.white : const Color(0xFF2D1B2E),
+        fontSize: 13,
+        fontFamily: 'Nunito',
+      ),
       dropdownColor: isDark ? const Color(0xFF2D1B2E) : Colors.white,
       isExpanded: true,
       items: items

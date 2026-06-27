@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'data/app_state.dart';
 import 'theme/app_theme.dart';
 import 'pages/home_page.dart';
@@ -7,8 +9,28 @@ import 'pages/explore_page.dart';
 import 'pages/sell_page.dart';
 import 'pages/community_page.dart';
 import 'pages/profile_page.dart';
+import 'pages/login_page.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Membaca file konfigurasi .env
+  try {
+    await dotenv.load(fileName: ".env");
+  } catch (e) {
+    debugPrint(
+      "Peringatan: File .env tidak ditemukan, menggunakan nilai default.",
+    );
+  }
+
+  // Inisialisasi Supabase
+  final supabaseUrl =
+      dotenv.env['SUPABASE_URL'] ?? 'https://plmoyaxwjefvswtxpigq.supabase.co';
+  final supabaseAnonKey =
+      dotenv.env['SUPABASE_ANON_KEY'] ?? 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBsbW95YXh3amVmdnN3dHhwaWdxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI0ODA1NzMsImV4cCI6MjA5ODA1NjU3M30.GLaU4IXTRGn0vXRAwlboWTPrEkk8DvP_-0m42cp0TNg';
+
+  await Supabase.initialize(url: supabaseUrl, anonKey: supabaseAnonKey);
+
   runApp(const WhimsifyApp());
 }
 
@@ -29,7 +51,6 @@ class _AppRoot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Hanya listen themeMode dengan select, tidak rebuild seluruh tree
     final themeMode = context.select<AppState, ThemeMode>((s) => s.themeMode);
     return MaterialApp(
       title: 'Whimsify',
@@ -37,7 +58,45 @@ class _AppRoot extends StatelessWidget {
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: themeMode,
-      home: const MainNavigation(),
+      home: const AuthWrapper(),
+    );
+  }
+}
+
+class AuthWrapper extends StatefulWidget {
+  const AuthWrapper({super.key});
+
+  @override
+  State<AuthWrapper> createState() => _AuthWrapperState();
+}
+
+class _AuthWrapperState extends State<AuthWrapper> {
+  late final Stream<AuthState> _authStream;
+
+  @override
+  void initState() {
+    super.initState();
+    _authStream = Supabase.instance.client.auth.onAuthStateChange;
+    // Auto-login: Jika token valid dan ada user, langsung load data
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (Supabase.instance.client.auth.currentUser != null) {
+        context.read<AppState>().loadAllData();
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<AuthState>(
+      stream: _authStream,
+      builder: (context, snapshot) {
+        final session = Supabase.instance.client.auth.currentSession;
+        if (session == null) {
+          return const LoginPage();
+        } else {
+          return const MainNavigation();
+        }
+      },
     );
   }
 }
@@ -135,11 +194,39 @@ class _BottomNav extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
-            _NavItem(index: 0, icon: Icons.home_outlined, activeIcon: Icons.home, label: 'Home', currentIndex: currentIndex, onTap: onTap),
-            _NavItem(index: 1, icon: Icons.explore_outlined, activeIcon: Icons.explore, label: 'Explore', currentIndex: currentIndex, onTap: onTap),
+            _NavItem(
+              index: 0,
+              icon: Icons.home_outlined,
+              activeIcon: Icons.home,
+              label: 'Home',
+              currentIndex: currentIndex,
+              onTap: onTap,
+            ),
+            _NavItem(
+              index: 1,
+              icon: Icons.explore_outlined,
+              activeIcon: Icons.explore,
+              label: 'Explore',
+              currentIndex: currentIndex,
+              onTap: onTap,
+            ),
             const SizedBox(width: 60),
-            _NavItem(index: 3, icon: Icons.people_outline, activeIcon: Icons.people, label: 'Komunitas', currentIndex: currentIndex, onTap: onTap),
-            _NavItem(index: 4, icon: Icons.person_outline, activeIcon: Icons.person, label: 'Profil', currentIndex: currentIndex, onTap: onTap),
+            _NavItem(
+              index: 3,
+              icon: Icons.people_outline,
+              activeIcon: Icons.people,
+              label: 'Komunitas',
+              currentIndex: currentIndex,
+              onTap: onTap,
+            ),
+            _NavItem(
+              index: 4,
+              icon: Icons.person_outline,
+              activeIcon: Icons.person,
+              label: 'Profil',
+              currentIndex: currentIndex,
+              onTap: onTap,
+            ),
           ],
         ),
       ),

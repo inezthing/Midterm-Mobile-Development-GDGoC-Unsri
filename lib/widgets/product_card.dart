@@ -49,10 +49,51 @@ class ProductCard extends StatelessWidget {
                           radix: 16,
                         ),
                       ),
-                      borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(16),
+                      ),
                     ),
-                    child: Center(
-                      child: Text(product.imageEmoji, style: const TextStyle(fontSize: 52)),
+                    child: ClipRRect(
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(16),
+                      ),
+                      child:
+                          product.imageUrl != null &&
+                              product.imageUrl!.isNotEmpty
+                          ? Image.network(
+                              product.imageUrl!,
+                              fit: BoxFit.cover,
+                              width: double.infinity,
+                              height: double.infinity,
+                              loadingBuilder:
+                                  (context, child, loadingProgress) {
+                                    if (loadingProgress == null) return child;
+                                    return const Center(
+                                      child: SizedBox(
+                                        width: 24,
+                                        height: 24,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: AppTheme.primary,
+                                        ),
+                                      ),
+                                    );
+                                  },
+                              errorBuilder: (context, error, stackTrace) {
+                                return Center(
+                                  child: Text(
+                                    product.imageEmoji,
+                                    style: const TextStyle(fontSize: 52),
+                                  ),
+                                );
+                              },
+                            )
+                          : Center(
+                              child: Text(
+                                product.imageEmoji,
+                                style: const TextStyle(fontSize: 52),
+                              ),
+                            ),
                     ),
                   ),
                   // Favorite — pakai Consumer biar hanya bagian ini yang rebuild
@@ -62,11 +103,15 @@ class ProductCard extends StatelessWidget {
                     child: Consumer<AppState>(
                       builder: (context, state, _) {
                         final isFav = state.products
-                            .firstWhere((p) => p.id == product.id,
-                                orElse: () => product)
+                            .firstWhere(
+                              (p) => p.id == product.id,
+                              orElse: () => product,
+                            )
                             .isFavorite;
                         return Semantics(
-                          label: isFav ? 'Hapus dari favorit' : 'Tambahkan ke favorit',
+                          label: isFav
+                              ? 'Hapus dari favorit'
+                              : 'Tambahkan ke favorit',
                           child: GestureDetector(
                             onTap: () => state.toggleFavorite(product.id),
                             child: Container(
@@ -79,7 +124,9 @@ class ProductCard extends StatelessWidget {
                               child: Icon(
                                 isFav ? Icons.favorite : Icons.favorite_border,
                                 size: 16,
-                                color: isFav ? AppTheme.primary : Colors.grey[400],
+                                color: isFav
+                                    ? AppTheme.primary
+                                    : Colors.grey[400],
                               ),
                             ),
                           ),
@@ -92,7 +139,10 @@ class ProductCard extends StatelessWidget {
                       top: 8,
                       left: 8,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
                           color: AppTheme.primary,
                           borderRadius: BorderRadius.circular(6),
@@ -102,11 +152,14 @@ class ProductCard extends StatelessWidget {
                           children: [
                             Icon(Icons.verified, size: 10, color: Colors.white),
                             SizedBox(width: 2),
-                            Text('Verified',
-                                style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 9,
-                                    fontWeight: FontWeight.w700)),
+                            Text(
+                              'Verified',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 9,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
                           ],
                         ),
                       ),

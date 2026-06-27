@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shimmer/shimmer.dart';
 import '../data/app_state.dart';
 import '../models/models.dart';
 import '../theme/app_theme.dart';
@@ -20,8 +21,15 @@ class _ExplorePageState extends State<ExplorePage> {
   String _selectedCategory = 'All';
 
   static const List<String> _categories = [
-    'All', 'Woman Fashion', 'Man Fashion', 'Health & Beauty',
-    'Keychain', 'Trinket', 'Shoes', 'Playing Card', 'Sticker',
+    'All',
+    'Woman Fashion',
+    'Man Fashion',
+    'Health & Beauty',
+    'Keychain',
+    'Trinket',
+    'Shoes',
+    'Playing Card',
+    'Sticker',
   ];
 
   @override
@@ -36,6 +44,63 @@ class _ExplorePageState extends State<ExplorePage> {
     super.dispose();
   }
 
+  Widget _buildShimmerGrid(int cols) {
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: cols,
+        childAspectRatio: 0.72,
+        crossAxisSpacing: 10,
+        mainAxisSpacing: 10,
+      ),
+      itemCount: cols * 2,
+      itemBuilder: (context, index) {
+        return Shimmer.fromColors(
+          baseColor: Colors.grey[300]!,
+          highlightColor: Colors.grey[100]!,
+          child: Card(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  flex: 5,
+                  child: Container(
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.vertical(
+                        top: Radius.circular(16),
+                      ),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  flex: 4,
+                  child: Padding(
+                    padding: const EdgeInsets.all(10),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(height: 12, width: 80, color: Colors.white),
+                        const SizedBox(height: 6),
+                        Container(height: 10, width: 50, color: Colors.white),
+                        const Spacer(),
+                        Container(height: 14, width: 70, color: Colors.white),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   List<Product> _getFiltered(List<Product> all) {
     List<Product> products = _query.isEmpty
         ? all
@@ -48,8 +113,9 @@ class _ExplorePageState extends State<ExplorePage> {
                 p.sellerName.toLowerCase().contains(q);
           }).toList();
     if (_selectedCategory != 'All') {
-      products =
-          products.where((p) => p.category == _selectedCategory).toList();
+      products = products
+          .where((p) => p.category == _selectedCategory)
+          .toList();
     }
     return products;
   }
@@ -97,16 +163,21 @@ class _ExplorePageState extends State<ExplorePage> {
                           decoration: InputDecoration(
                             hintText: 'Cari nama, brand, kategori...',
                             hintStyle: TextStyle(
-                                color: isDark
-                                    ? Colors.white38
-                                    : Colors.grey[400],
-                                fontSize: 13),
-                            prefixIcon: const Icon(Icons.search,
-                                color: AppTheme.primary, size: 20),
+                              color: isDark ? Colors.white38 : Colors.grey[400],
+                              fontSize: 13,
+                            ),
+                            prefixIcon: const Icon(
+                              Icons.search,
+                              color: AppTheme.primary,
+                              size: 20,
+                            ),
                             suffixIcon: _query.isNotEmpty
                                 ? IconButton(
-                                    icon: const Icon(Icons.close,
-                                        size: 16, color: Colors.grey),
+                                    icon: const Icon(
+                                      Icons.close,
+                                      size: 16,
+                                      color: Colors.grey,
+                                    ),
                                     onPressed: () {
                                       setState(() => _query = '');
                                       _searchController.clear();
@@ -116,8 +187,9 @@ class _ExplorePageState extends State<ExplorePage> {
                             border: InputBorder.none,
                             enabledBorder: InputBorder.none,
                             focusedBorder: InputBorder.none,
-                            contentPadding:
-                                const EdgeInsets.symmetric(vertical: 12),
+                            contentPadding: const EdgeInsets.symmetric(
+                              vertical: 12,
+                            ),
                             fillColor: Colors.transparent,
                           ),
                         ),
@@ -130,9 +202,10 @@ class _ExplorePageState extends State<ExplorePage> {
                       label: 'Keranjang, ${state.cartCount} item',
                       button: true,
                       child: GestureDetector(
-                        onTap: () => Navigator.push(context,
-                            MaterialPageRoute(
-                                builder: (_) => const CartPage())),
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const CartPage()),
+                        ),
                         child: Stack(
                           children: [
                             Container(
@@ -151,8 +224,11 @@ class _ExplorePageState extends State<ExplorePage> {
                                   ),
                                 ],
                               ),
-                              child: const Icon(Icons.shopping_bag_outlined,
-                                  color: AppTheme.primary, size: 22),
+                              child: const Icon(
+                                Icons.shopping_bag_outlined,
+                                color: AppTheme.primary,
+                                size: 22,
+                              ),
                             ),
                             if (state.cartCount > 0)
                               Positioned(
@@ -161,14 +237,16 @@ class _ExplorePageState extends State<ExplorePage> {
                                 child: Container(
                                   padding: const EdgeInsets.all(4),
                                   decoration: const BoxDecoration(
-                                      color: AppTheme.primary,
-                                      shape: BoxShape.circle),
+                                    color: AppTheme.primary,
+                                    shape: BoxShape.circle,
+                                  ),
                                   child: Text(
                                     '${state.cartCount}',
                                     style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w800),
+                                      color: Colors.white,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w800,
+                                    ),
                                   ),
                                 ),
                               ),
@@ -186,8 +264,10 @@ class _ExplorePageState extends State<ExplorePage> {
               height: 46,
               child: ListView.builder(
                 scrollDirection: Axis.horizontal,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 itemCount: _categories.length,
                 itemBuilder: (context, index) {
                   final cat = _categories[index];
@@ -198,7 +278,9 @@ class _ExplorePageState extends State<ExplorePage> {
                       duration: const Duration(milliseconds: 200),
                       margin: const EdgeInsets.only(right: 8),
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 4),
+                        horizontal: 14,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: isSelected
                             ? AppTheme.primary
@@ -206,9 +288,7 @@ class _ExplorePageState extends State<ExplorePage> {
                         border: Border.all(
                           color: isSelected
                               ? AppTheme.primary
-                              : (isDark
-                                  ? Colors.white24
-                                  : Colors.grey[300]!),
+                              : (isDark ? Colors.white24 : Colors.grey[300]!),
                         ),
                         borderRadius: BorderRadius.circular(20),
                       ),
@@ -219,9 +299,7 @@ class _ExplorePageState extends State<ExplorePage> {
                           fontWeight: FontWeight.w700,
                           color: isSelected
                               ? Colors.white
-                              : (isDark
-                                  ? Colors.white60
-                                  : Colors.grey[600]),
+                              : (isDark ? Colors.white60 : Colors.grey[600]),
                         ),
                       ),
                     ),
@@ -232,36 +310,47 @@ class _ExplorePageState extends State<ExplorePage> {
 
             // ── Grid dengan LayoutBuilder ─────────────────────────────
             Expanded(
-              child: Selector<AppState, List<Product>>(
-                selector: (_, state) => state.products,
-                builder: (context, allProducts, _) {
-                  final filtered = _getFiltered(allProducts);
+              child: Consumer<AppState>(
+                builder: (context, state, _) {
+                  if (state.isLoading) {
+                    return LayoutBuilder(
+                      builder: (context, constraints) {
+                        final screenW = MediaQuery.of(context).size.width;
+                        int cols = screenW >= 1000
+                            ? 4
+                            : (screenW >= 600 ? 3 : 2);
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: _buildShimmerGrid(cols),
+                        );
+                      },
+                    );
+                  }
+
+                  final filtered = _getFiltered(state.products);
 
                   if (filtered.isEmpty) {
                     return Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Text('🔍',
-                              style: TextStyle(fontSize: 48)),
+                          const Text('🔍', style: TextStyle(fontSize: 48)),
                           const SizedBox(height: 12),
                           Text(
                             'Produk tidak ditemukan',
                             style: TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w700,
-                                color: isDark
-                                    ? Colors.white54
-                                    : Colors.grey[500]),
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              color: isDark ? Colors.white54 : Colors.grey[500],
+                            ),
                           ),
                           const SizedBox(height: 4),
                           Text(
                             'Coba kata kunci lain',
                             style: TextStyle(
-                                fontSize: 12,
-                                color: isDark
-                                    ? Colors.white38
-                                    : Colors.grey[400]),
+                              fontSize: 12,
+                              color: isDark ? Colors.white38 : Colors.grey[400],
+                            ),
                           ),
                         ],
                       ),
@@ -272,27 +361,25 @@ class _ExplorePageState extends State<ExplorePage> {
                     children: [
                       if (_query.isNotEmpty || _selectedCategory != 'All')
                         Padding(
-                          padding:
-                              const EdgeInsets.fromLTRB(16, 6, 16, 0),
+                          padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
                           child: Align(
                             alignment: Alignment.centerLeft,
                             child: Text(
                               '${filtered.length} produk ditemukan',
                               style: TextStyle(
-                                  fontSize: 12,
-                                  color: isDark
-                                      ? Colors.white54
-                                      : Colors.grey[500],
-                                  fontWeight: FontWeight.w600),
+                                fontSize: 12,
+                                color: isDark
+                                    ? Colors.white54
+                                    : Colors.grey[500],
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ),
                         ),
-                      // LayoutBuilder untuk breakpoint responsif (rubrik C)
                       Expanded(
                         child: LayoutBuilder(
                           builder: (context, constraints) {
-                            final screenW =
-                                MediaQuery.of(context).size.width;
+                            final screenW = MediaQuery.of(context).size.width;
                             int cols;
                             if (screenW >= 1000) {
                               cols = 4;
@@ -305,11 +392,11 @@ class _ExplorePageState extends State<ExplorePage> {
                               padding: const EdgeInsets.all(16),
                               gridDelegate:
                                   SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: cols,
-                                childAspectRatio: 0.72,
-                                crossAxisSpacing: 10,
-                                mainAxisSpacing: 10,
-                              ),
+                                    crossAxisCount: cols,
+                                    childAspectRatio: 0.72,
+                                    crossAxisSpacing: 10,
+                                    mainAxisSpacing: 10,
+                                  ),
                               itemCount: filtered.length,
                               itemBuilder: (context, index) =>
                                   ProductCard(product: filtered[index]),

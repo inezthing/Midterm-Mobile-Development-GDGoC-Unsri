@@ -68,7 +68,7 @@ class _CategorySliderState extends State<CategorySlider> {
                                   color: AppTheme.primary.withOpacity(0.4),
                                   blurRadius: 8,
                                   offset: const Offset(0, 3),
-                                )
+                                ),
                               ]
                             : [],
                       ),
@@ -92,8 +92,8 @@ class _CategorySliderState extends State<CategorySlider> {
                         color: isSelected
                             ? AppTheme.primary
                             : Theme.of(context).brightness == Brightness.dark
-                                ? Colors.white70
-                                : Colors.grey[600],
+                            ? Colors.white70
+                            : Colors.grey[600],
                       ),
                     ),
                   ],
