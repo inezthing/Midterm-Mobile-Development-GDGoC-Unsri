@@ -1,26 +1,62 @@
 import 'dart:io';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/models.dart';
+import 'package:flutter/foundation.dart';
+
+// Helper untuk mengubah Supabase error jadi pesan yang ramah user
+String _friendlyError(Object e) {
+  final msg = e.toString().toLowerCase();
+  if (msg.contains('invalid login credentials') ||
+      msg.contains('email not confirmed')) {
+    return 'Email atau password salah. Coba lagi.';
+  }
+  if (msg.contains('user already registered') ||
+      msg.contains('already been registered')) {
+    return 'Email ini sudah terdaftar. Silakan masuk.';
+  }
+  if (msg.contains('network') ||
+      msg.contains('socket') ||
+      msg.contains('connection')) {
+    return 'Tidak ada koneksi internet. Periksa jaringanmu.';
+  }
+  if (msg.contains('rate limit')) {
+    return 'Terlalu banyak percobaan. Tunggu sebentar lalu coba lagi.';
+  }
+  if (msg.contains('jwt') || msg.contains('token')) {
+    return 'Sesi kamu sudah habis. Silakan masuk ulang.';
+  }
+  if (msg.contains('permission') || msg.contains('policy')) {
+    return 'Kamu tidak punya akses untuk melakukan ini.';
+  }
+  return 'Terjadi kesalahan. Coba lagi nanti.';
+}
 
 class SupabaseService {
   static final SupabaseService _instance = SupabaseService._internal();
   factory SupabaseService() => _instance;
   SupabaseService._internal();
+
   final SupabaseClient _client = Supabase.instance.client;
   SupabaseClient get client => _client;
+
   // ==========================================
   // AUTHENTICATION
   // ==========================================
   User? get currentUser => _client.auth.currentUser;
   bool get isAuthenticated => currentUser != null;
+
   Future<AuthResponse> signIn({
     required String email,
     required String password,
   }) async {
-    return await _client.auth.signInWithPassword(
-      email: email,
-      password: password,
-    );
+    try {
+      return await _client.auth.signInWithPassword(
+        email: email,
+        password: password,
+      );
+    } catch (e) {
+      throw Exception(_friendlyError(e));
+    }
   }
 
   Future<AuthResponse> signUp({
@@ -28,15 +64,24 @@ class SupabaseService {
     required String password,
     required String username,
   }) async {
-    return await _client.auth.signUp(
-      email: email,
-      password: password,
-      data: {'username': username, 'avatar_url': '🌷'},
-    );
+    try {
+      return await _client.auth.signUp(
+        email: email,
+        password: password,
+        data: {'username': username, 'avatar_url': '🌷'},
+      );
+    } catch (e) {
+      throw Exception(_friendlyError(e));
+    }
   }
 
   Future<void> signOut() async {
-    await _client.auth.signOut();
+    try {
+      await _client.auth.signOut();
+    } catch (e) {
+      // Tetap lanjutkan logout meski error — data lokal tetap dibersihkan
+      debugPrint('Sign out error (ignored): $e');
+    }
   }
 
   Future<Map<String, dynamic>?> fetchUserProfile(String userId) async {
@@ -48,6 +93,7 @@ class SupabaseService {
           .maybeSingle();
       return data;
     } catch (e) {
+      debugPrint('Error fetching user profile: $e');
       return null;
     }
   }
@@ -56,15 +102,19 @@ class SupabaseService {
   // PRODUCTS
   // ==========================================
   Future<List<Product>> fetchProducts() async {
-    final userId = currentUser?.id;
-    // Join products with profiles and favorites to get all details at once
-    final response = await _client
-        .from('products')
-        .select('*, profiles(*), favorites(*)')
-        .order('listed_at', ascending: false);
-    return (response as List).map((json) {
-      return Product.fromJson(json, currentUserId: userId);
-    }).toList();
+    try {
+      final userId = currentUser?.id;
+      final response = await _client
+          .from('products')
+          .select('*, profiles(*), favorites(*)')
+          .order('listed_at', ascending: false);
+      return (response as List).map((json) {
+        return Product.fromJson(json, currentUserId: userId);
+      }).toList();
+    } catch (e) {
+      debugPrint('Error fetching products: $e');
+      throw Exception(_friendlyError(e));
+    }
   }
 
   Future<Product> createProduct({
@@ -78,26 +128,31 @@ class SupabaseService {
     String? imageUrl,
     required List<String> paymentMethods,
   }) async {
-    if (currentUser == null) throw Exception('User not logged in');
-    final response = await _client
-        .from('products')
-        .insert({
-          'name': name,
-          'brand': brand,
-          'description': description,
-          'category': category,
-          'price': price,
-          'condition': condition,
-          'size': size,
-          'seller_id': currentUser!.id,
-          'image_url': imageUrl,
-          'payment_methods': paymentMethods,
-          'image_emoji': _getCategoryEmoji(category),
-          'image_color': _getCategoryColor(category),
-        })
-        .select('*, profiles(*)')
-        .single();
-    return Product.fromJson(response, currentUserId: currentUser!.id);
+    if (currentUser == null) throw Exception('Kamu perlu masuk dulu.');
+    try {
+      final response = await _client
+          .from('products')
+          .insert({
+            'name': name,
+            'brand': brand,
+            'description': description,
+            'category': category,
+            'price': price,
+            'condition': condition,
+            'size': size,
+            'seller_id': currentUser!.id,
+            'image_url': imageUrl,
+            'payment_methods': paymentMethods,
+            'image_emoji': _getCategoryEmoji(category),
+            'image_color': _getCategoryColor(category),
+          })
+          .select('*, profiles(*)')
+          .single();
+      return Product.fromJson(response, currentUserId: currentUser!.id);
+    } catch (e) {
+      debugPrint('Error creating product: $e');
+      throw Exception(_friendlyError(e));
+    }
   }
 
   Future<String?> uploadProductImage(File file) async {
@@ -105,37 +160,35 @@ class SupabaseService {
       if (currentUser == null) return null;
       final fileName =
           '${currentUser!.id}/${DateTime.now().millisecondsSinceEpoch}.jpg';
-
-      // Upload file to product_images bucket
-      await _client.storage
-          .from('product_images')
-          .upload(
-            fileName,
-            file,
-            fileOptions: const FileOptions(cacheControl: '3600', upsert: true),
-          );
-      // Get public URL
-      final publicUrl = _client.storage
-          .from('product_images')
-          .getPublicUrl(fileName);
-      return publicUrl;
+      await _client.storage.from('product_images').upload(
+        fileName,
+        file,
+        fileOptions: const FileOptions(cacheControl: '3600', upsert: true),
+      );
+      return _client.storage.from('product_images').getPublicUrl(fileName);
     } catch (e) {
-      return null;
+      debugPrint('Error uploading image: $e');
+      return null; // Gagal upload gambar tidak fatal, produk tetap dibuat
     }
   }
 
   Future<void> toggleFavorite(String productId, bool isFavorite) async {
     if (currentUser == null) return;
-    if (isFavorite) {
-      await _client.from('favorites').insert({
-        'user_id': currentUser!.id,
-        'product_id': productId,
-      });
-    } else {
-      await _client.from('favorites').delete().match({
-        'user_id': currentUser!.id,
-        'product_id': productId,
-      });
+    try {
+      if (isFavorite) {
+        await _client.from('favorites').insert({
+          'user_id': currentUser!.id,
+          'product_id': productId,
+        });
+      } else {
+        await _client.from('favorites').delete().match({
+          'user_id': currentUser!.id,
+          'product_id': productId,
+        });
+      }
+    } catch (e) {
+      debugPrint('Error toggling favorite: $e');
+      throw Exception(_friendlyError(e));
     }
   }
 
@@ -144,103 +197,126 @@ class SupabaseService {
   // ==========================================
   Future<List<CartItem>> fetchCart() async {
     if (currentUser == null) return [];
-
-    final response = await _client
-        .from('cart_items')
-        .select('*, products(*, profiles(*))')
-        .eq('user_id', currentUser!.id);
-    return (response as List).map((json) {
-      final productJson = json['products'];
-      final product = Product.fromJson(
-        productJson,
-        currentUserId: currentUser!.id,
-      );
-      return CartItem(
-        id: json['id'] as String,
-        product: product,
-        quantity: json['quantity'] as int,
-      );
-    }).toList();
+    try {
+      final response = await _client
+          .from('cart_items')
+          .select('*, products(*, profiles(*))')
+          .eq('user_id', currentUser!.id);
+      return (response as List).map((json) {
+        final productJson = json['products'];
+        final product = Product.fromJson(
+          productJson,
+          currentUserId: currentUser!.id,
+        );
+        return CartItem(
+          id: json['id'] as String,
+          product: product,
+          quantity: json['quantity'] as int,
+        );
+      }).toList();
+    } catch (e) {
+      debugPrint('Error fetching cart: $e');
+      return []; // Return kosong agar app tidak crash
+    }
   }
 
   Future<CartItem> addToCart(Product product) async {
-    if (currentUser == null) throw Exception('User not logged in');
-    // Check if item already in cart
-    final existing = await _client
-        .from('cart_items')
-        .select()
-        .eq('user_id', currentUser!.id)
-        .eq('product_id', product.id)
-        .maybeSingle();
-    if (existing != null) {
-      final newQty = (existing['quantity'] as int) + 1;
-      final response = await _client
+    if (currentUser == null) throw Exception('Kamu perlu masuk dulu.');
+    try {
+      final existing = await _client
           .from('cart_items')
-          .update({'quantity': newQty})
-          .eq('id', existing['id'])
-          .select('*, products(*, profiles(*))')
-          .single();
-      final prod = Product.fromJson(
-        response['products'],
-        currentUserId: currentUser!.id,
-      );
-      return CartItem(
-        id: response['id'] as String,
-        product: prod,
-        quantity: response['quantity'] as int,
-      );
-    } else {
-      final response = await _client
-          .from('cart_items')
-          .insert({
-            'user_id': currentUser!.id,
-            'product_id': product.id,
-            'quantity': 1,
-          })
-          .select('*, products(*, profiles(*))')
-          .single();
-      final prod = Product.fromJson(
-        response['products'],
-        currentUserId: currentUser!.id,
-      );
-      return CartItem(
-        id: response['id'] as String,
-        product: prod,
-        quantity: response['quantity'] as int,
-      );
+          .select()
+          .eq('user_id', currentUser!.id)
+          .eq('product_id', product.id)
+          .maybeSingle();
+
+      if (existing != null) {
+        final newQty = (existing['quantity'] as int) + 1;
+        final response = await _client
+            .from('cart_items')
+            .update({'quantity': newQty})
+            .eq('id', existing['id'])
+            .select('*, products(*, profiles(*))')
+            .single();
+        final prod = Product.fromJson(
+          response['products'],
+          currentUserId: currentUser!.id,
+        );
+        return CartItem(
+          id: response['id'] as String,
+          product: prod,
+          quantity: response['quantity'] as int,
+        );
+      } else {
+        final response = await _client
+            .from('cart_items')
+            .insert({
+              'user_id': currentUser!.id,
+              'product_id': product.id,
+              'quantity': 1,
+            })
+            .select('*, products(*, profiles(*))')
+            .single();
+        final prod = Product.fromJson(
+          response['products'],
+          currentUserId: currentUser!.id,
+        );
+        return CartItem(
+          id: response['id'] as String,
+          product: prod,
+          quantity: response['quantity'] as int,
+        );
+      }
+    } catch (e) {
+      debugPrint('Error adding to cart: $e');
+      throw Exception(_friendlyError(e));
     }
   }
 
   Future<void> removeFromCart(String cartItemId) async {
     if (currentUser == null) return;
-    await _client.from('cart_items').delete().eq('id', cartItemId);
+    try {
+      await _client.from('cart_items').delete().eq('id', cartItemId);
+    } catch (e) {
+      debugPrint('Error removing from cart: $e');
+      throw Exception(_friendlyError(e));
+    }
   }
 
   Future<void> updateCartQuantity(String cartItemId, int quantity) async {
     if (currentUser == null) return;
-    await _client
-        .from('cart_items')
-        .update({'quantity': quantity})
-        .eq('id', cartItemId);
+    try {
+      await _client
+          .from('cart_items')
+          .update({'quantity': quantity})
+          .eq('id', cartItemId);
+    } catch (e) {
+      debugPrint('Error updating cart quantity: $e');
+      throw Exception(_friendlyError(e));
+    }
   }
 
   // ==========================================
   // COMMUNITY
   // ==========================================
   Future<List<CommunityPost>> fetchPosts() async {
-    final userId = currentUser?.id;
-    final response = await _client
-        .from('community_posts')
-        .select('*, profiles(*), post_likes(*), community_replies(count)')
-        .order('posted_at', ascending: false);
-    return (response as List).map((json) {
-      // Map replies count from relation aggregates if available
-      final repliesCount =
-          (json['community_replies'] as List?)?.first?['count'] ?? 0;
-      final enrichedJson = Map<String, dynamic>.from(json);
-      enrichedJson['community_replies_count'] = repliesCount;
-      return CommunityPost.fromJson(enrichedJson, currentUserId: userId);
-    }).toList();
+    try {
+      final userId = currentUser?.id;
+      final response = await _client
+          .from('community_posts')
+          .select('*, profiles(*), post_likes(*), community_replies(count)')
+          .order('posted_at', ascending: false);
+      return (response as List).map((json) {
+        final repliesCount =
+            (json['community_replies'] as List?)?.first?['count'] ?? 0;
+        final enrichedJson = Map<String, dynamic>.from(json);
+        enrichedJson['community_replies_count'] = repliesCount;
+        return CommunityPost.fromJson(enrichedJson, currentUserId: userId);
+      }).toList();
+    } catch (e) {
+      debugPrint('Error fetching posts: $e');
+      return [];
+    }
   }
 
   Future<CommunityPost> createPost({
@@ -249,52 +325,72 @@ class SupabaseService {
     required String title,
     required String content,
   }) async {
-    if (currentUser == null) throw Exception('User not logged in');
-    final response = await _client
-        .from('community_posts')
-        .insert({
-          'user_id': currentUser!.id,
-          'community': community,
-          'type': type,
-          'title': title,
-          'content': content,
-        })
-        .select('*, profiles(*)')
-        .single();
-    return CommunityPost.fromJson(response, currentUserId: currentUser!.id);
+    if (currentUser == null) throw Exception('Kamu perlu masuk dulu.');
+    try {
+      final response = await _client
+          .from('community_posts')
+          .insert({
+            'user_id': currentUser!.id,
+            'community': community,
+            'type': type,
+            'title': title,
+            'content': content,
+          })
+          .select('*, profiles(*)')
+          .single();
+      return CommunityPost.fromJson(response, currentUserId: currentUser!.id);
+    } catch (e) {
+      debugPrint('Error creating post: $e');
+      throw Exception(_friendlyError(e));
+    }
   }
 
   Future<void> toggleLikePost(String postId, bool isLiked) async {
     if (currentUser == null) return;
-    if (isLiked) {
-      await _client.from('post_likes').insert({
-        'user_id': currentUser!.id,
-        'post_id': postId,
-      });
-    } else {
-      await _client.from('post_likes').delete().match({
-        'user_id': currentUser!.id,
-        'post_id': postId,
-      });
+    try {
+      if (isLiked) {
+        await _client.from('post_likes').insert({
+          'user_id': currentUser!.id,
+          'post_id': postId,
+        });
+      } else {
+        await _client.from('post_likes').delete().match({
+          'user_id': currentUser!.id,
+          'post_id': postId,
+        });
+      }
+    } catch (e) {
+      debugPrint('Error toggling like: $e');
+      throw Exception(_friendlyError(e));
     }
   }
 
   Future<List<Map<String, dynamic>>> fetchReplies(String postId) async {
-    final response = await _client
-        .from('community_replies')
-        .select('*, profiles(*)')
-        .eq('post_id', postId)
-        .order('created_at', ascending: true);
-    return List<Map<String, dynamic>>.from(response);
+    try {
+      final response = await _client
+          .from('community_replies')
+          .select('*, profiles(*)')
+          .eq('post_id', postId)
+          .order('created_at', ascending: true);
+      return List<Map<String, dynamic>>.from(response);
+    } catch (e) {
+      debugPrint('Error fetching replies: $e');
+      return [];
+    }
   }
 
   Future<void> createReply(String postId, String content) async {
-    if (currentUser == null) throw Exception('User not logged in');
-    await _client.from('community_replies').insert({
-      'post_id': postId,
-      'user_id': currentUser!.id,
-      'content': content,
-    });
+    if (currentUser == null) throw Exception('Kamu perlu masuk dulu.');
+    try {
+      await _client.from('community_replies').insert({
+        'post_id': postId,
+        'user_id': currentUser!.id,
+        'content': content,
+      });
+    } catch (e) {
+      debugPrint('Error creating reply: $e');
+      throw Exception(_friendlyError(e));
+    }
   }
 
   // ==========================================
@@ -346,3 +442,6 @@ class SupabaseService {
     }
   }
 }
+
+// ignore: avoid_print
+//void debugPrint(String message) => print(message);

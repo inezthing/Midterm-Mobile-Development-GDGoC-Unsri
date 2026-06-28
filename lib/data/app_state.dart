@@ -1,15 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/models.dart';
 import 'supabase_service.dart';
+import 'secure_storage_service.dart'; // BARU
 
 class AppState extends ChangeNotifier {
   final _api = SupabaseService();
+
   bool _isLoading = false;
   ThemeMode _themeMode = ThemeMode.system;
   List<Product> _products = [];
   List<CommunityPost> _posts = [];
   List<CartItem> _cart = [];
   Map<String, dynamic>? _userProfile;
+  String? _errorMessage;
+
+  String? get errorMessage => _errorMessage;
+  void clearError() { _errorMessage = null; notifyListeners(); }
+
   bool get isLoading => _isLoading;
   ThemeMode get themeMode => _themeMode;
   List<Product> get products => _products;
@@ -17,25 +25,54 @@ class AppState extends ChangeNotifier {
   List<CartItem> get cart => _cart;
   Map<String, dynamic>? get userProfile => _userProfile;
   int get cartCount => _cart.fold(0, (sum, item) => sum + item.quantity);
-  double get cartTotalPrice => _cart.fold(
-    0.0,
-    (sum, item) => sum + (item.product.price * item.quantity),
-  );
+  double get cartTotalPrice =>
+      _cart.fold(0.0, (sum, item) => sum + (item.product.price * item.quantity));
+
   void _setLoading(bool val) {
     _isLoading = val;
     notifyListeners();
   }
 
-  void setThemeMode(ThemeMode mode) {
+  // ==========================================
+  // THEME — PERSISTENT
+  // ==========================================
+  Future<void> loadThemePreference() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final saved = prefs.getString('theme_mode') ?? 'system';
+      _themeMode = switch (saved) {
+        'light' => ThemeMode.light,
+        'dark' => ThemeMode.dark,
+        _ => ThemeMode.system,
+      };
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error loading theme preference: $e');
+    }
+  }
+
+  Future<void> setThemeMode(ThemeMode mode) async {
     _themeMode = mode;
     notifyListeners();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final modeString = switch (mode) {
+        ThemeMode.light => 'light',
+        ThemeMode.dark => 'dark',
+        _ => 'system',
+      };
+      await prefs.setString('theme_mode', modeString);
+    } catch (e) {
+      debugPrint('Error saving theme preference: $e');
+    }
   }
 
   // ==========================================
-  // INITIAL DATA LOADING
+  // DATA LOADING
   // ==========================================
   Future<void> loadAllData() async {
     _setLoading(true);
+    _errorMessage = null;
     try {
       await Future.wait([
         loadUserProfile(),
@@ -44,7 +81,9 @@ class AppState extends ChangeNotifier {
         loadPosts(),
       ]);
     } catch (e) {
+      _errorMessage = 'Gagal memuat data. Periksa koneksi internetmu.';
       debugPrint('Error loading Whimsify data: $e');
+      notifyListeners();
     } finally {
       _setLoading(false);
     }
@@ -52,8 +91,12 @@ class AppState extends ChangeNotifier {
 
   Future<void> loadUserProfile() async {
     if (_api.currentUser != null) {
-      _userProfile = await _api.fetchUserProfile(_api.currentUser!.id);
-      notifyListeners();
+      try {
+        _userProfile = await _api.fetchUserProfile(_api.currentUser!.id);
+        notifyListeners();
+      } catch (e) {
+        debugPrint('Error loading user profile: $e');
+      }
     }
   }
 
@@ -85,6 +128,26 @@ class AppState extends ChangeNotifier {
   }
 
   // ==========================================
+  // LOGOUT — bersihkan state + secure storage
+  // ==========================================
+  Future<void> signOut() async {
+    await _api.signOut();
+    // ✅ Hapus token dari Keychain/Keystore juga
+    await SecureStorageService.clearAll();
+    _clearLocalState();
+  }
+
+  void _clearLocalState() {
+    _products = [];
+    _posts = [];
+    _cart = [];
+    _userProfile = null;
+    _errorMessage = null;
+    _isLoading = false;
+    notifyListeners();
+  }
+
+  // ==========================================
   // ACTIONS & MUTATIONS
   // ==========================================
   Future<void> toggleFavorite(String productId) async {
@@ -92,14 +155,11 @@ class AppState extends ChangeNotifier {
     if (index != -1) {
       final product = _products[index];
       final newFavState = !product.isFavorite;
-
-      // Update local UI state immediately for responsive feel
       product.isFavorite = newFavState;
       notifyListeners();
       try {
         await _api.toggleFavorite(productId, newFavState);
       } catch (e) {
-        // Rollback local state on error
         product.isFavorite = !newFavState;
         notifyListeners();
         debugPrint('Error toggling favorite: $e');
@@ -111,7 +171,6 @@ class AppState extends ChangeNotifier {
     try {
       final newItem = await _api.addToCart(product);
       final index = _cart.indexWhere((item) => item.product.id == product.id);
-
       if (index != -1) {
         _cart[index] = newItem;
       } else {
@@ -120,6 +179,7 @@ class AppState extends ChangeNotifier {
       notifyListeners();
     } catch (e) {
       debugPrint('Error adding to cart: $e');
+      rethrow;
     }
   }
 
@@ -130,6 +190,7 @@ class AppState extends ChangeNotifier {
       notifyListeners();
     } catch (e) {
       debugPrint('Error removing from cart: $e');
+      rethrow;
     }
   }
 
@@ -164,7 +225,6 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> addProduct(Product product) async {
-    // Inserts at the beginning of local state
     _products.insert(0, product);
     notifyListeners();
   }
@@ -179,8 +239,6 @@ class AppState extends ChangeNotifier {
     if (index != -1) {
       final post = _posts[index];
       final newLikeState = !post.isLiked;
-
-      // Update locally
       post.isLiked = newLikeState;
       final offset = newLikeState ? 1 : -1;
       final newPost = CommunityPost(
@@ -202,7 +260,6 @@ class AppState extends ChangeNotifier {
       try {
         await _api.toggleLikePost(postId, newLikeState);
       } catch (e) {
-        // Rollback on error
         _posts[index] = post;
         notifyListeners();
         debugPrint('Error liking post: $e');
@@ -222,14 +279,12 @@ class AppState extends ChangeNotifier {
     if (query.isEmpty) return _products;
     final q = query.toLowerCase();
     return _products
-        .where(
-          (p) =>
-              p.name.toLowerCase().contains(q) ||
-              p.brand.toLowerCase().contains(q) ||
-              p.category.toLowerCase().contains(q) ||
-              p.description.toLowerCase().contains(q) ||
-              p.sellerName.toLowerCase().contains(q),
-        )
+        .where((p) =>
+            p.name.toLowerCase().contains(q) ||
+            p.brand.toLowerCase().contains(q) ||
+            p.category.toLowerCase().contains(q) ||
+            p.description.toLowerCase().contains(q) ||
+            p.sellerName.toLowerCase().contains(q))
         .toList();
   }
 

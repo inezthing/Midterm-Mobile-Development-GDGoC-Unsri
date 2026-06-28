@@ -8,9 +8,80 @@ Whimsify adalah aplikasi mobile marketplace untuk barang-barang preloved bertema
 
 ## Screenshot
 
-> Lihat folder [`screenshot_app/`](./screenshot_app) untuk tampilan lengkap aplikasi.
+<table>
+  <tr>
+    <td align="center"><b>Login</b></td>
+    <td align="center"><b>Home</b></td>
+    <td align="center"><b>Explore</b></td>
+    <td align="center"><b>Detail</b></td>
+  </tr>
+  <tr>
+    <td><img src="screenshot_app/login.jpg" width="180"/></td>
+    <td><img src="screenshot_app/home.jpg" width="180"/></td>
+    <td><img src="screenshot_app/explore.jpg" width="180"/></td>
+    <td><img src="screenshot_app/detail.jpg" width="180"/></td>
+  </tr>
+  <tr>
+    <td align="center"><b>Sell</b></td>
+    <td align="center"><b>Komunitas</b></td>
+    <td align="center"><b>Profil</b></td>
+    <td align="center"><b>Settings</b></td>
+  </tr>
+  <tr>
+    <td><img src="screenshot_app/sell.jpg" width="180"/></td>
+    <td><img src="screenshot_app/community.jpg" width="180"/></td>
+    <td><img src="screenshot_app/profile.jpg" width="180"/></td>
+    <td><img src="screenshot_app/settings.jpg" width="180"/></td>
+  </tr>
+</table>
 
 ---
+
+## Arsitektur Aplikasi
+
+Whimsify menggunakan arsitektur berlapis yang memisahkan UI, state, service, dan data.
+
+```mermaid
+graph TD
+    subgraph UI["🖼️ UI Layer (lib/pages & lib/widgets)"]
+        A[LoginPage] 
+        B[HomePage]
+        C[ExplorePage]
+        D[DetailPage]
+        E[SellPage]
+        F[CommunityPage]
+        G[ProfilePage]
+        H[SettingsPage]
+    end
+
+    subgraph State["⚙️ State Layer (Provider)"]
+        I[AppState<br/>ChangeNotifier]
+    end
+
+    subgraph Service["🔌 Service Layer"]
+        J[SupabaseService<br/>Singleton]
+        K[SecureStorageService<br/>flutter_secure_storage]
+    end
+
+    subgraph Backend["☁️ Backend - Supabase"]
+        L[(PostgreSQL<br/>Database)]
+        M[Auth<br/>JWT + PKCE]
+        N[Storage<br/>Product Images]
+    end
+
+    subgraph Local["💾 Local Storage"]
+        O[Keychain / Keystore<br/>JWT Token]
+        P[SharedPreferences<br/>Theme Mode]
+    end
+
+    UI -->|"read/watch"| State
+    UI -->|"actions"| State
+    State -->|"calls"| Service
+    J -->|"queries"| Backend
+    K -->|"stores token"| Local
+    M -->|"token"| K
+    I -->|"theme"| P
+```
 
 ## ✨ Fitur Aplikasi
 
@@ -82,13 +153,13 @@ Whimsify adalah aplikasi mobile marketplace untuk barang-barang preloved bertema
 | `flutter` | SDK | Framework utama |
 | `provider` | `^6.1.1` | State management global |
 | `supabase_flutter` | `^2.6.0` | Backend & autentikasi |
+| `flutter_secure_storage` | `^9.2.2` | Simpan JWT token di Keychain/Keystore |
+| `shared_preferences` | `^2.3.2` | Simpan preferensi tema |
 | `flutter_dotenv` | `^5.1.0` | Manajemen environment variable |
 | `shimmer` | `^3.0.0` | Loading skeleton effect |
 | `image_picker` | `^1.1.2` | Pilih gambar dari galeri/kamera |
 
-**Dart SDK:** `>=3.0.0 <4.0.0`
-
-**Versi Aplikasi:** `1.0.0+1`
+**Dart SDK:** `>=3.3.0 <4.0.0`
 
 ---
 
@@ -96,14 +167,24 @@ Whimsify adalah aplikasi mobile marketplace untuk barang-barang preloved bertema
 
 Aplikasi ini menggunakan **[Supabase](https://supabase.com)** sebagai backend-as-a-service.
 
-| Layanan | Detail |
-|---|---|
+||---|---|
 | **Database** | PostgreSQL via Supabase |
-| **Auth** | Supabase Authentication |
-| **Storage** | Supabase Storage (untuk gambar produk) |
-| **Realtime** | Supabase Realtime (opsional untuk chat komunitas) |
+| **Auth** | Supabase Auth — JWT + PKCE flow |
+| **Storage** | Supabase Storage bucket `product_images` |
+| **Token Storage** | `flutter_secure_storage` → Keychain (iOS) / EncryptedSharedPreferences (Android) |
 
-Konfigurasi Supabase disimpan di file `.env` dan diakses menggunakan `flutter_dotenv`.
+### Tabel Database
+
+| Tabel | Kolom Utama | Keterangan |
+|---|---|---|
+| `profiles` | `id`, `username`, `avatar_url`, `is_verified` | Data profil user |
+| `products` | `id`, `name`, `brand`, `category`, `price`, `condition`, `seller_id`, `image_url` | Listing produk |
+| `favorites` | `user_id`, `product_id` | Produk yang di-favorit |
+| `cart_items` | `user_id`, `product_id`, `quantity` | Item di keranjang |
+| `community_posts` | `id`, `user_id`, `community`, `type`, `title`, `content` | Postingan komunitas |
+| `post_likes` | `user_id`, `post_id` | Like postingan |
+| `community_replies` | `post_id`, `user_id`, `content` | Balasan postingan |
+
 
 ### Konfigurasi `.env`
 
@@ -173,7 +254,8 @@ lib/
 │   └── models.dart            # Product, CommunityPost, CartItem
 ├── data/
 │   ├── mock_data.dart         # Data lokal hardcoded (produk & komunitas)
-│   └── app_state.dart         # ChangeNotifier — state management global
+│   ├── app_state.dart         # ChangeNotifier — state management global
+│   └── secure_storage_service.dart  # JWT storage di Keychain/Keystore
 ├── pages/
 │   ├── home_page.dart         # StatelessWidget, CustomScrollView, SliverGrid
 │   ├── explore_page.dart      # StatefulWidget, search + filter + GridView
@@ -189,16 +271,4 @@ lib/
     └── category_slider.dart   # StatefulWidget, horizontal ListView
 ```
 
----
-
-## Tentang Proyek
-
-Proyek ini dikerjakan sebagai **Midterm Exam** Mobile Development Division **GDGoC (Google Developer Groups on Campus) Universitas Sriwijaya**.
-
-- **Nama Aplikasi:** Whimsify
-- **Tema:** Preloved marketplace untuk barang-barang imut & koleksi
-- **Platform:** Android & iOS (Flutter cross-platform)
-- **State Management:** Provider (`ChangeNotifier`)
-
----
 

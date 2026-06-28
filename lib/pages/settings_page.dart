@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../data/app_state.dart';
 import '../theme/app_theme.dart';
-import '../data/supabase_service.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -14,6 +13,65 @@ class SettingsPage extends StatefulWidget {
 class _SettingsPageState extends State<SettingsPage> {
   bool _notifEnabled = true;
   bool _priceAlertEnabled = false;
+  bool _isLoggingOut = false; // BARU: loading state untuk logout
+
+  // ==========================================
+  // LOGOUT — pakai AppState.signOut() agar state bersih
+  // ==========================================
+  Future<void> _handleLogout() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: const Text(
+          'Keluar dari akun?',
+          style: TextStyle(fontWeight: FontWeight.w800),
+        ),
+        content: const Text(
+          'Kamu akan keluar dari akun Whimsify kamu.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text(
+              'Batal',
+              style: TextStyle(color: AppTheme.primary),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red[400],
+            ),
+            child: const Text('Keluar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _isLoggingOut = true);
+    try {
+      // signOut di AppState membersihkan semua state lokal sekaligus
+      await context.read<AppState>().signOut();
+      // AuthWrapper di main.dart otomatis redirect ke LoginPage
+      if (mounted) Navigator.of(context).popUntil((route) => route.isFirst);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal keluar: ${e.toString()}'),
+            backgroundColor: Colors.red[400],
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoggingOut = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -35,7 +93,7 @@ class _SettingsPageState extends State<SettingsPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _sectionHeader('Tampilan', textColor),
+              _sectionHeader('Tampilan'),
               const SizedBox(height: 10),
 
               _settingsCard(
@@ -60,21 +118,26 @@ class _SettingsPageState extends State<SettingsPage> {
                             _themeOption(
                               label: '☀️ Terang',
                               isSelected: state.themeMode == ThemeMode.light,
-                              onTap: () => state.setThemeMode(ThemeMode.light),
+                              // setThemeMode di AppState sekarang auto-persist ke SharedPreferences
+                              onTap: () =>
+                                  state.setThemeMode(ThemeMode.light),
                               isDark: isDark,
                             ),
                             const SizedBox(width: 8),
                             _themeOption(
                               label: '🌙 Gelap',
                               isSelected: state.themeMode == ThemeMode.dark,
-                              onTap: () => state.setThemeMode(ThemeMode.dark),
+                              onTap: () =>
+                                  state.setThemeMode(ThemeMode.dark),
                               isDark: isDark,
                             ),
                             const SizedBox(width: 8),
                             _themeOption(
                               label: '⚙️ Sistem',
-                              isSelected: state.themeMode == ThemeMode.system,
-                              onTap: () => state.setThemeMode(ThemeMode.system),
+                              isSelected:
+                                  state.themeMode == ThemeMode.system,
+                              onTap: () =>
+                                  state.setThemeMode(ThemeMode.system),
                               isDark: isDark,
                             ),
                           ],
@@ -86,7 +149,7 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
 
               const SizedBox(height: 16),
-              _sectionHeader('Notifikasi', textColor),
+              _sectionHeader('Notifikasi'),
               const SizedBox(height: 10),
 
               _settingsCard(
@@ -108,7 +171,8 @@ class _SettingsPageState extends State<SettingsPage> {
                     label: '💰 Alert Harga',
                     subtitle: 'Notif saat harga produk favorit turun',
                     value: _priceAlertEnabled,
-                    onChanged: (v) => setState(() => _priceAlertEnabled = v),
+                    onChanged: (v) =>
+                        setState(() => _priceAlertEnabled = v),
                     isDark: isDark,
                     textColor: textColor,
                   ),
@@ -116,7 +180,7 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
 
               const SizedBox(height: 16),
-              _sectionHeader('Akun', textColor),
+              _sectionHeader('Akun'),
               const SizedBox(height: 10),
 
               _settingsCard(
@@ -149,7 +213,7 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
 
               const SizedBox(height: 16),
-              _sectionHeader('Tentang', textColor),
+              _sectionHeader('Tentang'),
               const SizedBox(height: 10),
 
               _settingsCard(
@@ -192,48 +256,26 @@ class _SettingsPageState extends State<SettingsPage> {
 
               const SizedBox(height: 20),
 
+              // ==========================================
+              // TOMBOL LOGOUT — pakai _handleLogout()
+              // ==========================================
               SizedBox(
                 width: double.infinity,
                 child: OutlinedButton.icon(
-                  onPressed: () => showDialog(
-                    context: context,
-                    builder: (ctx) => AlertDialog(
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      title: const Text(
-                        'Keluar dari akun?',
-                        style: TextStyle(fontWeight: FontWeight.w800),
-                      ),
-                      content: const Text(
-                        'Kamu akan keluar dari akun Whimsify kamu.',
-                      ),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(ctx),
-                          child: const Text(
-                            'Batal',
-                            style: TextStyle(color: AppTheme.primary),
+                  onPressed: _isLoggingOut ? null : _handleLogout,
+                  icon: _isLoggingOut
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.red,
                           ),
-                        ),
-                        ElevatedButton(
-                          onPressed: () async {
-                            Navigator.pop(ctx); // Tutup dialog
-                            Navigator.pop(context); // Tutup halaman Settings
-                            await SupabaseService().signOut();
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.red[400],
-                          ),
-                          child: const Text('Keluar'),
-                        ),
-                      ],
-                    ),
-                  ),
-                  icon: const Icon(Icons.logout, size: 16, color: Colors.red),
-                  label: const Text(
-                    'Keluar',
-                    style: TextStyle(
+                        )
+                      : const Icon(Icons.logout, size: 16, color: Colors.red),
+                  label: Text(
+                    _isLoggingOut ? 'Keluar...' : 'Keluar',
+                    style: const TextStyle(
                       color: Colors.red,
                       fontWeight: FontWeight.w700,
                     ),
@@ -256,7 +298,7 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  Widget _sectionHeader(String title, Color textColor) {
+  Widget _sectionHeader(String title) {
     return Padding(
       padding: const EdgeInsets.only(left: 4),
       child: Text(
@@ -271,7 +313,10 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  Widget _settingsCard({required bool isDark, required List<Widget> children}) {
+  Widget _settingsCard({
+    required bool isDark,
+    required List<Widget> children,
+  }) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -397,7 +442,8 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  Widget _infoRow(String label, String value, bool isDark, Color textColor) {
+  Widget _infoRow(
+      String label, String value, bool isDark, Color textColor) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
