@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import '../data/app_state.dart';
-import '../models/models.dart';
 import '../theme/app_theme.dart';
 import '../data/supabase_service.dart';
 
@@ -87,6 +86,12 @@ class _SellPageState extends State<SellPage> {
     if (!_hasUnsavedChanges) setState(() => _hasUnsavedChanges = true);
   }
 
+  double? _parsePrice(String value) {
+    final digitsOnly = value.replaceAll(RegExp(r'[^0-9]'), '');
+    if (digitsOnly.isEmpty) return null;
+    return double.tryParse(digitsOnly);
+  }
+
   Future<bool> _onWillPop() async {
     if (!_hasUnsavedChanges) return true;
     final result = await showDialog<bool>(
@@ -149,7 +154,7 @@ class _SellPageState extends State<SellPage> {
         brand: _brandController.text.trim(),
         description: _descController.text.trim(),
         category: _selectedCategory,
-        price: double.parse(_priceController.text.trim()),
+        price: _parsePrice(_priceController.text.trim())!,
         condition: _selectedCondition,
         size: _sizeController.text.trim().isEmpty
             ? 'One Size'
@@ -224,7 +229,8 @@ class _SellPageState extends State<SellPage> {
       onPopInvokedWithResult: (didPop, _) async {
         if (!didPop && _hasUnsavedChanges) {
           final should = await _onWillPop();
-          if (should && mounted) Navigator.pop(context);
+          if (!context.mounted) return;
+          if (should) Navigator.of(context).pop();
         }
       },
       child: Scaffold(
@@ -235,9 +241,10 @@ class _SellPageState extends State<SellPage> {
             onPressed: () async {
               if (_hasUnsavedChanges) {
                 final should = await _onWillPop();
-                if (should && mounted) Navigator.pop(context);
+                if (!context.mounted) return;
+                if (should) Navigator.of(context).pop();
               } else {
-                Navigator.pop(context);
+                Navigator.of(context).pop();
               }
             },
           ),
@@ -449,9 +456,8 @@ class _SellPageState extends State<SellPage> {
                               hintText:
                                   'Ceritakan kondisi, alasan jual, kelengkapan...',
                               hintStyle: TextStyle(
-                                color: isDark
-                                    ? Colors.white38
-                                    : Colors.grey[400],
+                                color:
+                                    isDark ? Colors.white38 : Colors.grey[400],
                                 fontSize: 12,
                               ),
                               alignLabelWithHint: true,
@@ -482,7 +488,7 @@ class _SellPageState extends State<SellPage> {
                               if (v == null || v.trim().isEmpty) {
                                 return 'Harga wajib diisi';
                               }
-                              final parsed = double.tryParse(v.trim());
+                              final parsed = _parsePrice(v.trim());
                               if (parsed == null || parsed <= 0) {
                                 return 'Masukkan harga yang valid';
                               }
@@ -533,8 +539,8 @@ class _SellPageState extends State<SellPage> {
                                       color: isSelected
                                           ? AppTheme.primary
                                           : (isDark
-                                                ? const Color(0xFF3D2040)
-                                                : AppTheme.blush),
+                                              ? const Color(0xFF3D2040)
+                                              : AppTheme.blush),
                                       borderRadius: BorderRadius.circular(20),
                                     ),
                                     child: Text(

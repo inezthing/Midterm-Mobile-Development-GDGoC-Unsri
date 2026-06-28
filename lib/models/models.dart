@@ -30,7 +30,7 @@ class Product {
     required this.sellerName,
     required this.sellerVerified,
     this.imageUrl,
-    this.imageEmoji = '📦',
+    this.imageEmoji = '\u{1F4E6}',
     this.imageColor = '#E3F2FD',
     required this.listedAt,
     required this.paymentMethods,
@@ -45,38 +45,76 @@ class Product {
     final sellerProfile = json['profiles'] as Map<String, dynamic>?;
 
     var favorited = isFav;
-    if (json['favorites'] != null && json['favorites'] is List) {
+    if (json['favorites'] is List) {
       final favList = json['favorites'] as List;
       if (currentUserId != null) {
-        favorited = favList.any((f) => f['user_id'] == currentUserId);
+        favorited = favList.any(
+          (f) => f is Map && f['user_id'] == currentUserId,
+        );
       } else {
         favorited = favList.isNotEmpty;
       }
     }
 
     return Product(
-      id: json['id'] as String,
-      name: json['name'] as String,
-      brand: json['brand'] as String,
-      description: json['description'] ?? '',
-      category: json['category'] as String,
-      price: (json['price'] as num).toDouble(),
-      condition: json['condition'] as String,
-      size: json['size'] as String,
-      sellerId: json['seller_id'] as String,
+      id: _readString(json['id']),
+      name: _readString(json['name'], fallback: 'Produk tanpa nama'),
+      brand: _readString(json['brand'], fallback: 'No Brand'),
+      description: _readString(json['description']),
+      category: _readString(json['category'], fallback: 'Lainnya'),
+      price: _readDouble(json['price']),
+      condition: _readString(json['condition'], fallback: 'Preloved - Good'),
+      size: _readString(json['size'], fallback: 'One Size'),
+      sellerId: _readString(json['seller_id']),
       sellerName: sellerProfile != null
-          ? (sellerProfile['username'] ?? 'seller')
+          ? _readString(sellerProfile['username'], fallback: 'seller')
           : 'seller',
       sellerVerified: sellerProfile != null
-          ? (sellerProfile['is_verified'] ?? false)
+          ? _readBool(sellerProfile['is_verified'])
           : false,
       imageUrl: json['image_url'] as String?,
-      imageEmoji: json['image_emoji'] ?? '📦',
-      imageColor: json['image_color'] ?? '#E3F2FD',
-      listedAt: DateTime.parse(json['listed_at'] as String),
-      paymentMethods: List<String>.from(json['payment_methods'] ?? []),
+      imageEmoji: _readString(json['image_emoji'], fallback: '\u{1F4E6}'),
+      imageColor: _readString(json['image_color'], fallback: '#E3F2FD'),
+      listedAt: _readDateTime(json['listed_at'] ?? json['created_at']),
+      paymentMethods: _readStringList(json['payment_methods']),
       isFavorite: favorited,
     );
+  }
+
+  static String _readString(dynamic value, {String fallback = ''}) {
+    if (value == null) return fallback;
+    final text = value.toString().trim();
+    return text.isEmpty ? fallback : text;
+  }
+
+  static double _readDouble(dynamic value) {
+    if (value is num) return value.toDouble();
+    if (value is String) {
+      final normalized = value.replaceAll(RegExp(r'[^0-9.]'), '');
+      return double.tryParse(normalized) ?? 0;
+    }
+    return 0;
+  }
+
+  static bool _readBool(dynamic value) {
+    if (value is bool) return value;
+    if (value is String) return value.toLowerCase() == 'true';
+    if (value is num) return value != 0;
+    return false;
+  }
+
+  static DateTime _readDateTime(dynamic value) {
+    if (value is DateTime) return value;
+    if (value is String) {
+      return DateTime.tryParse(value) ?? DateTime.now();
+    }
+    return DateTime.now();
+  }
+
+  static List<String> _readStringList(dynamic value) {
+    if (value is List) return value.map((item) => item.toString()).toList();
+    if (value is String && value.trim().isNotEmpty) return [value.trim()];
+    return const [];
   }
 }
 
@@ -110,8 +148,8 @@ class CommunityPost {
     int? likesCount,
     int? likes,
     this.isLiked = false,
-  }) : repliesCount = repliesCount ?? replies.length,
-       likesCount = likesCount ?? likes ?? 0;
+  })  : repliesCount = repliesCount ?? replies.length,
+        likesCount = likesCount ?? likes ?? 0;
 
   factory CommunityPost.fromJson(
     Map<String, dynamic> json, {
@@ -120,44 +158,61 @@ class CommunityPost {
     final profile = json['profiles'] as Map<String, dynamic>?;
 
     var liked = false;
-    if (json['post_likes'] != null && json['post_likes'] is List) {
+    if (json['post_likes'] is List) {
       final likesList = json['post_likes'] as List;
       if (currentUserId != null) {
-        liked = likesList.any((l) => l['user_id'] == currentUserId);
+        liked = likesList.any((l) => l is Map && l['user_id'] == currentUserId);
       } else {
         liked = likesList.isNotEmpty;
       }
     }
 
     var likesCount = 0;
-    if (json['post_likes_count'] != null) {
+    if (json['post_likes_count'] is int) {
       likesCount = json['post_likes_count'] as int;
-    } else if (json['post_likes'] != null && json['post_likes'] is List) {
+    } else if (json['post_likes'] is List) {
       likesCount = (json['post_likes'] as List).length;
     }
 
     var repliesCount = 0;
-    if (json['community_replies_count'] != null) {
+    if (json['community_replies_count'] is int) {
       repliesCount = json['community_replies_count'] as int;
-    } else if (json['community_replies'] != null &&
-        json['community_replies'] is List) {
+    } else if (json['community_replies'] is List) {
       repliesCount = (json['community_replies'] as List).length;
     }
 
     return CommunityPost(
-      id: json['id'] as String,
-      userId: json['user_id'] as String,
-      userName: profile != null ? (profile['username'] ?? 'user') : 'user',
-      userAvatar: profile != null ? (profile['avatar_url'] ?? '🐰') : '🐰',
-      community: json['community'] as String,
-      type: json['type'] as String,
-      title: json['title'] as String,
-      content: json['content'] as String,
-      postedAt: DateTime.parse(json['posted_at'] as String),
+      id: _readString(json['id']),
+      userId: _readString(json['user_id']),
+      userName: profile != null
+          ? _readString(profile['username'], fallback: 'user')
+          : 'user',
+      userAvatar: profile != null
+          ? _readString(profile['avatar_url'], fallback: '\u{1F464}')
+          : '\u{1F464}',
+      community: _readString(json['community'], fallback: 'General'),
+      type: _readString(json['type'], fallback: 'Discussion'),
+      title: _readString(json['title'], fallback: 'Tanpa judul'),
+      content: _readString(json['content']),
+      postedAt: _readDateTime(json['posted_at'] ?? json['created_at']),
       repliesCount: repliesCount,
       likesCount: likesCount,
       isLiked: liked,
     );
+  }
+
+  static String _readString(dynamic value, {String fallback = ''}) {
+    if (value == null) return fallback;
+    final text = value.toString().trim();
+    return text.isEmpty ? fallback : text;
+  }
+
+  static DateTime _readDateTime(dynamic value) {
+    if (value is DateTime) return value;
+    if (value is String) {
+      return DateTime.tryParse(value) ?? DateTime.now();
+    }
+    return DateTime.now();
   }
 }
 

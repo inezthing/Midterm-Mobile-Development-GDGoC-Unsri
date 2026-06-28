@@ -104,11 +104,22 @@ class SupabaseService {
   Future<List<Product>> fetchProducts() async {
     try {
       final userId = currentUser?.id;
-      final response = await _client
-          .from('products')
-          .select('*, profiles(*), favorites(*)')
-          .order('listed_at', ascending: false);
-      return (response as List).map((json) {
+      List<dynamic> response;
+      try {
+        response = await _client
+            .from('products')
+            .select('*, profiles(*), favorites(*)')
+            .order('listed_at', ascending: false);
+      } catch (e) {
+        debugPrint(
+          'Fetch products with relations failed, retrying basic query: $e',
+        );
+        response = await _client
+            .from('products')
+            .select()
+            .order('listed_at', ascending: false);
+      }
+      return response.map((json) {
         return Product.fromJson(json, currentUserId: userId);
       }).toList();
     } catch (e) {
@@ -130,6 +141,7 @@ class SupabaseService {
   }) async {
     if (currentUser == null) throw Exception('Kamu perlu masuk dulu.');
     try {
+      final userId = currentUser!.id;
       final response = await _client
           .from('products')
           .insert({
@@ -140,15 +152,22 @@ class SupabaseService {
             'price': price,
             'condition': condition,
             'size': size,
-            'seller_id': currentUser!.id,
+            'seller_id': userId,
             'image_url': imageUrl,
             'payment_methods': paymentMethods,
-            'image_emoji': _getCategoryEmoji(category),
+            'image_emoji': _getCategoryEmojiSafe(category),
             'image_color': _getCategoryColor(category),
           })
-          .select('*, profiles(*)')
+          .select()
           .single();
-      return Product.fromJson(response, currentUserId: currentUser!.id);
+
+      final productJson = Map<String, dynamic>.from(response);
+      final profile = await fetchUserProfile(userId);
+      if (profile != null) {
+        productJson['profiles'] = profile;
+      }
+
+      return Product.fromJson(productJson, currentUserId: userId);
     } catch (e) {
       debugPrint('Error creating product: $e');
       throw Exception(_friendlyError(e));
@@ -161,10 +180,10 @@ class SupabaseService {
       final fileName =
           '${currentUser!.id}/${DateTime.now().millisecondsSinceEpoch}.jpg';
       await _client.storage.from('product_images').upload(
-        fileName,
-        file,
-        fileOptions: const FileOptions(cacheControl: '3600', upsert: true),
-      );
+            fileName,
+            file,
+            fileOptions: const FileOptions(cacheControl: '3600', upsert: true),
+          );
       return _client.storage.from('product_images').getPublicUrl(fileName);
     } catch (e) {
       debugPrint('Error uploading image: $e');
@@ -288,8 +307,7 @@ class SupabaseService {
     try {
       await _client
           .from('cart_items')
-          .update({'quantity': quantity})
-          .eq('id', cartItemId);
+          .update({'quantity': quantity}).eq('id', cartItemId);
     } catch (e) {
       debugPrint('Error updating cart quantity: $e');
       throw Exception(_friendlyError(e));
@@ -396,6 +414,7 @@ class SupabaseService {
   // ==========================================
   // HELPER EMOJIS & COLORS (FALLBACK)
   // ==========================================
+  // ignore: unused_element
   String _getCategoryEmoji(String category) {
     switch (category) {
       case 'Woman Fashion':
@@ -416,6 +435,29 @@ class SupabaseService {
         return '🏷️';
       default:
         return '📦';
+    }
+  }
+
+  String _getCategoryEmojiSafe(String category) {
+    switch (category) {
+      case 'Woman Fashion':
+        return '\u{1F457}';
+      case 'Man Fashion':
+        return '\u{1F455}';
+      case 'Health & Beauty':
+        return '\u{1F484}';
+      case 'Keychain':
+        return '\u{1F511}';
+      case 'Trinket':
+        return '\u{1F9F8}';
+      case 'Shoes':
+        return '\u{1F45F}';
+      case 'Playing Card':
+        return '\u{1F0CF}';
+      case 'Sticker':
+        return '\u{1F3F7}\u{FE0F}';
+      default:
+        return '\u{1F4E6}';
     }
   }
 
