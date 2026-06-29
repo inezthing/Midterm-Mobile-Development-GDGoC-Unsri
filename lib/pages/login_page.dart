@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../data/supabase_service.dart';
 import '../data/app_state.dart';
+import 'main_navigation.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -15,6 +16,8 @@ class _LoginPageState extends State<LoginPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _usernameController = TextEditingController();
+  final _birthDateController = TextEditingController();
+  final _locationController = TextEditingController();
   bool _isRegister = false;
   bool _isLoading = false;
   bool _obscurePassword = true;
@@ -24,7 +27,16 @@ class _LoginPageState extends State<LoginPage> {
     _emailController.dispose();
     _passwordController.dispose();
     _usernameController.dispose();
+    _birthDateController.dispose();
+    _locationController.dispose();
     super.dispose();
+  }
+
+  void _goToHome() {
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const MainNavigation()),
+      (_) => false,
+    );
   }
 
   Future<void> _submit() async {
@@ -34,20 +46,29 @@ class _LoginPageState extends State<LoginPage> {
     try {
       if (_isRegister) {
         // Sign Up
-        await _api.signUp(
+        final response = await _api.signUp(
           email: _emailController.text.trim(),
           password: _passwordController.text,
           username: _usernameController.text.trim(),
+          birthDate: _birthDateController.text.trim(),
+          location: _locationController.text.trim(),
         );
-        scaffoldMessenger.showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Registrasi sukses! Silakan verifikasi email Anda jika diperlukan atau masuk.',
+
+        if (response.session != null && mounted) {
+          await context.read<AppState>().loadAllData();
+          if (!mounted) return;
+          _goToHome();
+        } else {
+          scaffoldMessenger.showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Registrasi berhasil. Cek email untuk verifikasi, lalu masuk.',
+              ),
+              backgroundColor: AppTheme.primary,
             ),
-            backgroundColor: AppTheme.primary,
-          ),
-        );
-        setState(() => _isRegister = false);
+          );
+          setState(() => _isRegister = false);
+        }
       } else {
         // Sign In
         await _api.signIn(
@@ -57,7 +78,8 @@ class _LoginPageState extends State<LoginPage> {
         if (mounted) {
           // Trigger loading all data
           await context.read<AppState>().loadAllData();
-          // LoginPage will be automatically popped/replaced by AuthState changes in main.dart
+          if (!mounted) return;
+          _goToHome();
         }
       }
     } catch (e) {
@@ -177,6 +199,47 @@ class _LoginPageState extends State<LoginPage> {
                                 }
                                 if (val.trim().length < 3) {
                                   return 'Minimal 3 karakter';
+                                }
+                                return null;
+                              },
+                            ),
+                            const SizedBox(height: 16),
+                            TextFormField(
+                              controller: _birthDateController,
+                              keyboardType: TextInputType.datetime,
+                              decoration: const InputDecoration(
+                                labelText: 'Tanggal lahir',
+                                hintText: 'Contoh: 2003-04-21',
+                                prefixIcon: Icon(Icons.cake_outlined),
+                              ),
+                              validator: (val) {
+                                if (val == null || val.trim().isEmpty) {
+                                  return 'Tanggal lahir tidak boleh kosong';
+                                }
+                                final parsed = DateTime.tryParse(val.trim());
+                                if (parsed == null) {
+                                  return 'Gunakan format YYYY-MM-DD';
+                                }
+                                if (parsed.isAfter(DateTime.now())) {
+                                  return 'Tanggal lahir tidak valid';
+                                }
+                                return null;
+                              },
+                            ),
+                            const SizedBox(height: 16),
+                            TextFormField(
+                              controller: _locationController,
+                              decoration: const InputDecoration(
+                                labelText: 'Lokasi',
+                                hintText: 'Contoh: Palembang',
+                                prefixIcon: Icon(Icons.location_on_outlined),
+                              ),
+                              validator: (val) {
+                                if (val == null || val.trim().isEmpty) {
+                                  return 'Lokasi tidak boleh kosong';
+                                }
+                                if (val.trim().length < 3) {
+                                  return 'Lokasi minimal 3 karakter';
                                 }
                                 return null;
                               },

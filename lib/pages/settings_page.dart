@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../data/app_state.dart';
 import '../theme/app_theme.dart';
+import 'login_page.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -57,8 +58,11 @@ class _SettingsPageState extends State<SettingsPage> {
     try {
       // signOut di AppState membersihkan semua state lokal sekaligus
       await context.read<AppState>().signOut();
-      // AuthWrapper di main.dart otomatis redirect ke LoginPage
-      if (mounted) Navigator.of(context).popUntil((route) => route.isFirst);
+      if (!mounted) return;
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const LoginPage()),
+        (_) => false,
+      );
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -119,25 +123,21 @@ class _SettingsPageState extends State<SettingsPage> {
                               label: '☀️ Terang',
                               isSelected: state.themeMode == ThemeMode.light,
                               // setThemeMode di AppState sekarang auto-persist ke SharedPreferences
-                              onTap: () =>
-                                  state.setThemeMode(ThemeMode.light),
+                              onTap: () => state.setThemeMode(ThemeMode.light),
                               isDark: isDark,
                             ),
                             const SizedBox(width: 8),
                             _themeOption(
                               label: '🌙 Gelap',
                               isSelected: state.themeMode == ThemeMode.dark,
-                              onTap: () =>
-                                  state.setThemeMode(ThemeMode.dark),
+                              onTap: () => state.setThemeMode(ThemeMode.dark),
                               isDark: isDark,
                             ),
                             const SizedBox(width: 8),
                             _themeOption(
                               label: '⚙️ Sistem',
-                              isSelected:
-                                  state.themeMode == ThemeMode.system,
-                              onTap: () =>
-                                  state.setThemeMode(ThemeMode.system),
+                              isSelected: state.themeMode == ThemeMode.system,
+                              onTap: () => state.setThemeMode(ThemeMode.system),
                               isDark: isDark,
                             ),
                           ],
@@ -171,8 +171,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     label: '💰 Alert Harga',
                     subtitle: 'Notif saat harga produk favorit turun',
                     value: _priceAlertEnabled,
-                    onChanged: (v) =>
-                        setState(() => _priceAlertEnabled = v),
+                    onChanged: (v) => setState(() => _priceAlertEnabled = v),
                     isDark: isDark,
                     textColor: textColor,
                   ),
@@ -442,8 +441,7 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  Widget _infoRow(
-      String label, String value, bool isDark, Color textColor) {
+  Widget _infoRow(String label, String value, bool isDark, Color textColor) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [

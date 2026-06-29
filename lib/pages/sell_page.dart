@@ -30,9 +30,13 @@ class _SellPageState extends State<SellPage> {
   File? _imageFile;
   final _picker = ImagePicker();
 
-  Future<void> _pickImage() async {
+  Future<void> _pickImageFrom(ImageSource source) async {
     try {
-      final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
+      final pickedFile = await _picker.pickImage(
+        source: source,
+        imageQuality: 85,
+        maxWidth: 1600,
+      );
       if (pickedFile != null) {
         setState(() {
           _imageFile = File(pickedFile.path);
@@ -42,6 +46,32 @@ class _SellPageState extends State<SellPage> {
     } catch (e) {
       debugPrint('Error picking image: $e');
     }
+  }
+
+  Future<void> _pickImage() async {
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_camera_outlined),
+              title: const Text('Ambil dari kamera'),
+              onTap: () => Navigator.pop(ctx, ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: const Text('Pilih dari galeri'),
+              onTap: () => Navigator.pop(ctx, ImageSource.gallery),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (source == null || !mounted) return;
+    await _pickImageFrom(source);
   }
 
   static const List<String> _categories = [

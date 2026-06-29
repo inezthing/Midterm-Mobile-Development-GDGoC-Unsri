@@ -63,16 +63,49 @@ class SupabaseService {
     required String email,
     required String password,
     required String username,
+    required String birthDate,
+    required String location,
   }) async {
     try {
-      return await _client.auth.signUp(
+      final response = await _client.auth.signUp(
         email: email,
         password: password,
-        data: {'username': username, 'avatar_url': '🌷'},
+        data: {
+          'username': username,
+          'avatar_url': '\u{1F337}',
+          'birth_date': birthDate,
+          'location': location,
+        },
       );
+
+      if (response.session != null && response.user != null) {
+        await upsertUserProfile(
+          userId: response.user!.id,
+          username: username,
+          birthDate: birthDate,
+          location: location,
+        );
+      }
+
+      return response;
     } catch (e) {
       throw Exception(_friendlyError(e));
     }
+  }
+
+  Future<void> upsertUserProfile({
+    required String userId,
+    required String username,
+    required String birthDate,
+    required String location,
+  }) async {
+    await _client.from('profiles').upsert({
+      'id': userId,
+      'username': username,
+      'avatar_url': '\u{1F337}',
+      'birth_date': birthDate,
+      'location': location,
+    });
   }
 
   Future<void> signOut() async {
@@ -91,11 +124,31 @@ class SupabaseService {
           .select()
           .eq('id', userId)
           .maybeSingle();
-      return data;
+      if (data != null) return data;
+      if (currentUser?.id == userId) {
+        return _profileFromAuthUser(currentUser!);
+      }
+      return null;
     } catch (e) {
       debugPrint('Error fetching user profile: $e');
+      if (currentUser?.id == userId) {
+        return _profileFromAuthUser(currentUser!);
+      }
       return null;
     }
+  }
+
+  Map<String, dynamic> _profileFromAuthUser(User user) {
+    final metadata = user.userMetadata ?? {};
+    return {
+      'id': user.id,
+      'username':
+          metadata['username'] ?? user.email?.split('@').first ?? 'User',
+      'avatar_url': metadata['avatar_url'] ?? '\u{1F337}',
+      'birth_date': metadata['birth_date'],
+      'location': metadata['location'],
+      'created_at': user.createdAt,
+    };
   }
 
   // ==========================================

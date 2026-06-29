@@ -19,13 +19,17 @@ class ProfilePage extends StatelessWidget {
         final textColor = isDark ? Colors.white : const Color(0xFF2D1B2E);
         final subColor = isDark ? Colors.white54 : Colors.grey[500]!;
         final currentUserId = SupabaseService().currentUser?.id;
-        final myProducts = state.products
-            .where((p) => p.sellerId == currentUserId)
-            .toList();
-        final myPosts = state.posts
-            .where((p) => p.userId == currentUserId)
-            .toList();
+        final myProducts =
+            state.products.where((p) => p.sellerId == currentUserId).toList();
+        final myPosts =
+            state.posts.where((p) => p.userId == currentUserId).toList();
         final username = state.userProfile?['username'] ?? 'User';
+        final age = _ageFromBirthDate(state.userProfile?['birth_date']);
+        final joinedAt = _formatJoinedAt(state.userProfile?['created_at']);
+        final location = _profileText(
+          state.userProfile?['location'],
+          fallback: 'Belum diisi',
+        );
         final avatarUrl = state.userProfile?['avatar_url'] ?? '🐰';
 
         return Scaffold(
@@ -133,11 +137,11 @@ class ProfilePage extends StatelessWidget {
                     ),
                     child: Row(
                       children: [
-                        _infoItem('21', 'Tahun', isDark),
+                        _infoItem(age, 'Tahun', isDark),
                         _divider(),
-                        _infoItem('Apr 2025', 'Bergabung', isDark),
+                        _infoItem(joinedAt, 'Bergabung', isDark),
                         _divider(),
-                        _infoItem('Palembang', 'Lokasi', isDark),
+                        _infoItem(location, 'Lokasi', isDark),
                       ],
                     ),
                   ),
@@ -403,6 +407,53 @@ class ProfilePage extends StatelessWidget {
   }
 
   Widget _divider() => Container(width: 1, height: 30, color: AppTheme.rose);
+
+  String _profileText(dynamic value, {required String fallback}) {
+    if (value == null) return fallback;
+    final text = value.toString().trim();
+    return text.isEmpty ? fallback : text;
+  }
+
+  String _ageFromBirthDate(dynamic value) {
+    final date = _parseDate(value);
+    if (date == null) return '-';
+
+    final now = DateTime.now();
+    var age = now.year - date.year;
+    final birthdayThisYear = DateTime(now.year, date.month, date.day);
+    if (birthdayThisYear.isAfter(now)) age--;
+
+    return age < 0 ? '-' : age.toString();
+  }
+
+  String _formatJoinedAt(dynamic value) {
+    final date = _parseDate(value);
+    if (date == null) return '-';
+
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'Mei',
+      'Jun',
+      'Jul',
+      'Agu',
+      'Sep',
+      'Okt',
+      'Nov',
+      'Des',
+    ];
+    return '${months[date.month - 1]} ${date.year}';
+  }
+
+  DateTime? _parseDate(dynamic value) {
+    if (value is DateTime) return value;
+    if (value is String && value.trim().isNotEmpty) {
+      return DateTime.tryParse(value.trim());
+    }
+    return null;
+  }
 
   Widget _statCard(String value, String label, String emoji, bool isDark) {
     return Container(
